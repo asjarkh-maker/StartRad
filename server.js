@@ -121,18 +121,19 @@ app.use((req, res, next) => {
 app.use('/api', express.json({ limit: '64kb' }));
 // ---------- HTML: Метрика, плашка cookie, общий подвал ----------
 const PUB = path.join(__dirname, 'public');
-function inject(html) {
+function inject(html, tracking = true) {
   const st = S();
   const id = st.site.metrikaId;
   const metrika = id ? `<script>(function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};m[i].l=1*new Date();for(var j=0;j<document.scripts.length;j++){if(document.scripts[j].src===r){return;}}k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})(window,document,"script","https://mc.yandex.ru/metrika/tag.js","ym");ym(${id},"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webvisor:true});</script><noscript><div><img src="https://mc.yandex.ru/watch/${id}" style="position:absolute;left:-9999px" alt=""></div></noscript>` : '';
   const cookie = `<script>(function(){try{if(localStorage.getItem('cookie-ok'))return}catch(e){}document.addEventListener('DOMContentLoaded',function(){var b=document.createElement('div');b.className='cookie';b.innerHTML='<span>Мы используем cookie${id ? ' и Яндекс Метрику' : ''}, чтобы сайт работал лучше. <a href="/privacy">Подробнее</a></span><button type="button">Понятно</button>';b.querySelector('button').onclick=function(){try{localStorage.setItem('cookie-ok','1')}catch(e){}b.remove()};document.body.appendChild(b)})})();</script>`;
+  if (!tracking) return html.replace('<!--FOOTER-->', pages.footer());
   return html.replace('</head>', metrika + '</head>').replace('</body>', cookie + '</body>').replace('<!--FOOTER-->', pages.footer());
 }
-function sendHtml(res, file, status = 200, noindex = false) {
+function sendHtml(res, file, status = 200, noindex = false, tracking = true) {
   fs.readFile(path.join(PUB, file), 'utf8', (err, html) => {
     if (err) return res.status(500).end();
     if (noindex) { res.setHeader('X-Robots-Tag', 'noindex'); res.setHeader('Cache-Control', 'no-store'); }
-    res.status(status).type('html').send(inject(html));
+    res.status(status).type('html').send(inject(html, tracking));
   });
 }
 app.get(['/', '/index.html'], (req, res) => sendHtml(res, 'index.html'));
@@ -356,7 +357,8 @@ app.post('/api/i/:slug/event', rate('event', 300, 3600e3), (req, res) => {
 
 // ---- страницы ----
 const page = (name) => (req, res) => sendHtml(res, name, 200, true);
-app.get('/i/:slug', page('invite.html'));
+// личное приглашение: без Метрики и без плашки cookie поверх экрана
+app.get('/i/:slug', (req, res) => sendHtml(res, 'invite.html', 200, true, false));
 app.get('/m/:token', page('owner.html'));
 
 app.use((req, res) => sendHtml(res, '404.html', 404));
