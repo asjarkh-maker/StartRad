@@ -14,7 +14,17 @@
 
 ## Настройки
 
-Всё настраивается в `data/settings.json` (пример — `settings.example.json`); файл перечитывается сам, перезапуск не нужен. На Windows-сервере удобнее запустить `deploy\settings-windows.ps1` — он спросит всё по очереди.
+Всё настраивается в `data/settings.json` (пример — `settings.example.json`); файл перечитывается сам, перезапуск не нужен. На Windows-сервере удобнее запустить `deploy\settings-windows.ps1` — он спросит всё по очереди:
+
+```powershell
+$f="$env:TEMP\tolko-settings.ps1"; iwr https://raw.githubusercontent.com/asjarkh-maker/startrad/feature/constructor/deploy/settings-windows.ps1 -OutFile $f -UseBasicParsing; powershell -ExecutionPolicy Bypass -File $f
+```
+
+Обновление сайта на Windows-сервере:
+
+```powershell
+$f="$env:TEMP\tolko-update.ps1"; iwr https://raw.githubusercontent.com/asjarkh-maker/startrad/feature/constructor/deploy/update-windows.ps1 -OutFile $f -UseBasicParsing; powershell -ExecutionPolicy Bypass -File $f
+```
 
 - **Реквизиты** (`seller`) подставляются в оферту, политику и согласие. Незаполненные поля подсвечены на страницах. Тексты документов — шаблон: проверьте их с юристом.
 - **Яндекс Метрика** — `site.metrikaId`.
