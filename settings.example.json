@@ -1,0 +1,25 @@
+{
+  "site": {
+    "url": "https://onlyda.ru",
+    "email": "support@example.ru",
+    "phone": "",
+    "telegram": "",
+    "metrikaId": ""
+  },
+  "seller": {
+    "status": "самозанятый",
+    "name": "Фамилия Имя Отчество",
+    "inn": "000000000000",
+    "ogrnip": "",
+    "address": ""
+  },
+  "price": 490,
+  "linkDays": 30,
+  "telegram": { "token": "" },
+  "yookassa": {
+    "shopId": "",
+    "secretKey": "",
+    "receipt": false,
+    "vatCode": 1
+  }
+}

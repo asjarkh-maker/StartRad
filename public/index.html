@@ -45,6 +45,7 @@
         <p class="lead">Собери милое приглашение за 3 минуты и отправь ссылку. Кнопка «Нет» убегает, а ты сразу узнаешь ответ, дату и место встречи.</p>
         <a class="btn" href="/create">Создать приглашение 💌</a>
         <p class="fineprint">Готово за 3 минуты · без регистрации · собрать и посмотреть — бесплатно, ссылка — <span id="price">490</span> ₽</p>
+        <p class="fineprint"><a href="/dlya-devushki">Для девушки</a> · <a href="/dlya-parnya">Для парня</a> · <a href="/14-fevralya">14 февраля</a> · <a href="/godovshchina">Годовщина</a></p>
       </div>
 
       <div class="phone-wrap">
@@ -91,7 +92,7 @@
       <div class="cta"><a class="btn" href="/create">Создать приглашение 💌</a></div>
     </section>
   </div>
-  <footer class="footer"><div class="wrap">© только да — приглашения, на которые отвечают «да»</div></footer>
+  <!--FOOTER-->
 
   <script>
     fetch('/api/config').then(r => r.json()).then(c => { document.getElementById('price').textContent = c.price; }).catch(() => {});

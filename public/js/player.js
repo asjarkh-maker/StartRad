@@ -19,6 +19,19 @@
   const HEART = '<svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.2C.8 8.3 2.9 4.5 6.6 4.5c2.1 0 3.6 1.2 4.4 2.5.8-1.3 2.3-2.5 4.4-2.5 3.7 0 5.8 3.8 4.2 7.3C19.5 16.4 12 21 12 21z"/></svg>';
   const DEFAULT_NO = ['Нет', 'Точно?', 'Подумай ещё', 'Не-а 🙈', 'Не поймаешь', 'Ну пожалуйста'];
 
+  // ---------- анимированные стикеры (Noto Animated Emoji, CC BY 4.0) ----------
+  const stCode = (e) => Array.from(e).map((c) => c.codePointAt(0)).filter((cp) => cp !== 0xfe0f).map((cp) => cp.toString(16)).join('_');
+  let stList = null;
+  const stData = new Map();
+  function stickerList() {
+    if (!stList) stList = fetch('/st/list.json').then((r) => (r.ok ? r.json() : [])).then((l) => new Set(l)).catch(() => new Set());
+    return stList;
+  }
+  function stickerData(code) {
+    if (!stData.has(code)) stData.set(code, fetch(`/st/${code}.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null));
+    return stData.get(code);
+  }
+
   function todayISO() {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -59,8 +72,49 @@
     root.append(bg, stage);
 
     const later = (fn, ms) => { const t = setTimeout(fn, ms); timers.push(t); return t; };
-    const sticker = (e, cls = '') => (e ? h('div', { class: 'pl-sticker ' + cls, text: e, 'aria-hidden': 'true' }) : null);
+    const anims = [];
+    function sticker(e, cls = '') {
+      if (!e) return null;
+      const el = h('div', { class: 'pl-sticker ' + cls, text: e, 'aria-hidden': 'true' });
+      if (window.lottie) {
+        const code = stCode(e);
+        stickerList().then((set) => (set.has(code) ? stickerData(code) : null)).then((data) => {
+          if (!data || !el.isConnected) return;
+          el.textContent = '';
+          el.classList.add('anim');
+          anims.push(window.lottie.loadAnimation({ container: el, renderer: 'svg', loop: true, autoplay: true, animationData: JSON.parse(JSON.stringify(data)) }));
+        });
+      }
+      return el;
+    }
+    const stopAnims = () => { while (anims.length) { try { anims.pop().destroy(); } catch (e) { /* уже удалена */ } } };
     const photo = () => (cfg.photo ? h('img', { class: 'pl-photo', src: `/u/${cfg.photo}`, alt: '' }) : null);
+    function videoCircle(file) {
+      if (!file) return null;
+      const v = h('video', { src: `/u/${file}`, playsinline: true, loop: true, autoplay: true, muted: true, preload: 'auto' });
+      v.muted = true;
+      const icon = h('span', { class: 'pl-circle-i', text: '🔇' });
+      const wrap = h('button', { class: 'pl-circle', type: 'button', 'aria-label': 'Включить звук' }, v, icon);
+      wrap.addEventListener('click', () => {
+        if (v.muted) { v.muted = false; v.currentTime = 0; v.play().catch(() => {}); icon.textContent = '🔊'; }
+        else { v.muted = true; icon.textContent = '🔇'; }
+      });
+      return wrap;
+    }
+    function voiceBubble(file) {
+      if (!file) return null;
+      const a = h('audio', { src: `/u/${file}`, preload: 'metadata' });
+      const btn = h('span', { class: 'pl-voice-b', text: '▶' });
+      const bar = h('i'), track = h('span', { class: 'pl-voice-t' }, bar);
+      const time = h('span', { class: 'pl-voice-s', text: '0:00' });
+      const fmt = (x) => (isFinite(x) ? `${Math.floor(x / 60)}:${String(Math.floor(x % 60)).padStart(2, '0')}` : '');
+      a.addEventListener('loadedmetadata', () => { time.textContent = fmt(a.duration) || ''; });
+      a.addEventListener('timeupdate', () => { if (isFinite(a.duration) && a.duration) bar.style.width = (a.currentTime / a.duration * 100) + '%'; time.textContent = fmt(a.currentTime); });
+      a.addEventListener('ended', () => { btn.textContent = '▶'; bar.style.width = '0'; });
+      const wrap = h('button', { class: 'pl-voice', type: 'button', 'aria-label': 'Голосовое сообщение' }, btn, track, time, a);
+      wrap.addEventListener('click', () => { if (a.paused) { a.play().catch(() => {}); btn.textContent = '❚❚'; } else { a.pause(); btn.textContent = '▶'; } });
+      return wrap;
+    }
     const names = () => cfg.toName || '';
     const fill = (t) => String(t || '')
       .replace(/\{имя\}|\{name\}/gi, names())
@@ -69,6 +123,8 @@
 
     function show(id) {
       cur = order.indexOf(id);
+      stopAnims();
+      stage.querySelectorAll('audio,video').forEach((m) => { try { m.pause(); } catch (e) { /* пусто */ } });
       stage.innerHTML = '';
       stage.scrollTop = 0;
       const el = ({ gate, ask, confirm, date, final })[id] ? ({ gate, ask, confirm, date, final })[id]() : choice(Number(id.slice(6)));
@@ -104,8 +160,9 @@
       const yes = h('button', { class: 'pl-btn pl-yes', type: 'button', text: a.yes || 'Да 💖' });
       const no = h('button', { class: 'pl-btn pl-no', type: 'button', text: (a.noLines && a.noLines[0]) || DEFAULT_NO[0] });
       const actions = h('div', { class: 'pl-actions' }, yes, no);
-      wrap.append(photo(), sticker(a.sticker), h('h2', { class: 'pl-title', text: fill(a.title) }),
-        a.text ? h('p', { class: 'pl-text', text: fill(a.text) }) : null, actions);
+      wrap.append(...[videoCircle(a.video), a.video ? null : photo(), a.video || cfg.photo ? null : sticker(a.sticker),
+        h('h2', { class: 'pl-title', text: fill(a.title) }),
+        a.text ? h('p', { class: 'pl-text', text: fill(a.text) }) : null, voiceBubble(a.voice), actions].filter(Boolean));
 
       const lines = a.noLines && a.noLines.length ? a.noLines : DEFAULT_NO;
       let tries = 0, scale = 1;
@@ -242,7 +299,7 @@
       screens: order,
       goto(id) { timers.forEach(clearTimeout); timers = []; if (order.includes(id)) show(id); },
       restart() { answers.noClicks = 0; answers.date = null; answers.picks = []; api.goto(order[0]); },
-      destroy() { timers.forEach(clearTimeout); root.innerHTML = ''; root.classList.remove('pl'); },
+      destroy() { timers.forEach(clearTimeout); stopAnims(); root.innerHTML = ''; root.classList.remove('pl', 'pl-live'); },
     };
     show(order.includes(opts.startAt) ? opts.startAt : order[0]);
     return api;

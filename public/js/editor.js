@@ -34,7 +34,7 @@
   const defaults = () => ({
     toName: '', fromName: '', theme: 'pink', photo: '',
     gate: { type: 'envelope', text: '' },
-    ask: { title: 'Пойдёшь со мной на свидание?', text: '', sticker: '🥺', yes: 'Да 💖', noLines: [] },
+    ask: { title: 'Пойдёшь со мной на свидание?', text: '', sticker: '🥺', yes: 'Да 💖', noLines: [], voice: '', video: '' },
     confirm: { title: 'Ура! Я так рад(а)!', text: '', sticker: '🥰' },
     date: { enabled: true, title: 'Когда тебе удобно?', text: 'Выбери день и время — я подстроюсь.', sticker: '🗓️' },
     choices: [{ title: 'Куда пойдём?', multi: false, items: [{ name: 'Кино', emoji: '🎬' }, { name: 'Кофейня', emoji: '☕' }, { name: 'Прогулка', emoji: '🌳' }] }],
@@ -130,9 +130,15 @@
     c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
     return new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('Не получилось обработать фото'))), 'image/jpeg', 0.86));
   }
+  async function uploadBlob(blob, kind) {
+    const r = await fetch(`/api/upload?kind=${kind}`, { method: 'POST', body: blob, headers: { 'content-type': blob.type || 'application/octet-stream' } });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || 'Не удалось загрузить');
+    return d.file;
+  }
   async function uploadPhoto(file) {
     const blob = await prepareImage(file);
-    const r = await fetch('/api/upload', { method: 'POST', body: blob, headers: { 'content-type': blob.type || 'application/octet-stream' } });
+    const r = await fetch('/api/upload?kind=image', { method: 'POST', body: blob, headers: { 'content-type': blob.type || 'application/octet-stream' } });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.error || 'Не удалось загрузить');
     return d.file;
@@ -151,6 +157,96 @@
           h('button', { type: 'button', class: 'btn btn-ghost btn-sm', text: 'Убрать', on: { click: () => set('photo', '', true) } }))
         : h('label', { class: 'btn btn-ghost btn-sm upload' }, '📷 Добавить фото', input),
       status);
+  }
+
+  // ---------- голосовое и кружок ----------
+  const canRecord = () => window.isSecureContext && navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder;
+  const pickMime = (list) => list.find((m) => window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) || '';
+  let rec = null; // текущая запись
+
+  function stopRecording(save) {
+    if (!rec) return;
+    rec.save = save;
+    clearInterval(rec.tick);
+    if (rec.mr.state !== 'inactive') rec.mr.stop(); else rec.finish();
+  }
+
+  function mediaField(kind) {
+    const isVideo = kind === 'video';
+    const path = isVideo ? 'ask.video' : 'ask.voice';
+    const label = isVideo ? 'Видео-кружок (необязательно)' : 'Голосовое (необязательно)';
+    const maxSec = isVideo ? 30 : 60;
+    const status = h('span', { class: 'f-h' });
+    const cur = get(path);
+    const box = h('div', { class: 'f' }, h('span', { class: 'f-l', text: label }));
+
+    if (cur) {
+      const media = isVideo
+        ? h('video', { class: 'media-thumb round', src: `/u/${cur}`, controls: true, playsinline: true, preload: 'metadata' })
+        : h('audio', { src: `/u/${cur}`, controls: true, preload: 'metadata' });
+      box.append(h('div', { class: 'photo-row' }, media,
+        h('button', { type: 'button', class: 'btn btn-ghost btn-sm', text: 'Убрать', on: { click: () => set(path, '', true) } })));
+      return box;
+    }
+
+    const file = h('input', { type: 'file', accept: isVideo ? 'video/*' : 'audio/*', class: 'sr-only' });
+    file.addEventListener('change', async () => {
+      const f = file.files[0]; if (!f) return;
+      status.textContent = 'Загружаю…';
+      try { set(path, await uploadBlob(f, isVideo ? 'video' : 'audio'), true); } catch (e) { status.textContent = e.message; }
+    });
+    const row = h('div', { class: 'media-row' });
+    const live = h('div', { class: 'media-live' });
+
+    async function start() {
+      if (rec) stopRecording(false);
+      status.textContent = '';
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(isVideo
+          ? { audio: true, video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 480 } } }
+          : { audio: true });
+      } catch (e) { status.textContent = 'Нет доступа к ' + (isVideo ? 'камере' : 'микрофону') + '. Разрешите его в браузере или загрузите файл.'; return; }
+      const mime = pickMime(isVideo ? ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4'] : ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg']);
+      const mr = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+      const chunks = [];
+      const t0 = Date.now();
+      const timer = h('b', { text: '0:00' });
+      const stopBtn = h('button', { type: 'button', class: 'btn btn-sm', text: '■ Готово', on: { click: () => stopRecording(true) } });
+      const cancel = h('button', { type: 'button', class: 'btn btn-ghost btn-sm', text: 'Отмена', on: { click: () => stopRecording(false) } });
+      live.innerHTML = '';
+      if (isVideo) { const v = h('video', { class: 'media-thumb round', playsinline: true, muted: true, autoplay: true }); v.muted = true; v.srcObject = stream; live.append(v); }
+      live.append(h('div', { class: 'media-rec' }, h('span', { class: 'rec-dot' }), timer, ` / ${maxSec} с`), stopBtn, cancel);
+      row.hidden = true;
+      rec = {
+        mr, save: false,
+        tick: setInterval(() => {
+          const sec = Math.floor((Date.now() - t0) / 1000);
+          timer.textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+          if (sec >= maxSec) stopRecording(true);
+        }, 250),
+        finish: async () => {
+          stream.getTracks().forEach((t) => t.stop());
+          const save = rec && rec.save;
+          rec = null;
+          live.innerHTML = ''; row.hidden = false;
+          if (!save || !chunks.length) return;
+          status.textContent = 'Загружаю…';
+          try { set(path, await uploadBlob(new Blob(chunks, { type: (mr.mimeType || mime || '').split(';')[0] }), isVideo ? 'video' : 'audio'), true); }
+          catch (e) { status.textContent = e.message; }
+        },
+      };
+      mr.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+      mr.onstop = () => rec && rec.finish();
+      mr.start(1000);
+    }
+
+    if (canRecord()) row.append(h('button', { type: 'button', class: 'btn btn-ghost btn-sm', text: isVideo ? '🎥 Записать кружок' : '🎙 Записать голосовое', on: { click: start } }));
+    row.append(h('label', { class: 'btn btn-ghost btn-sm upload' }, '📎 Загрузить файл', file));
+    box.append(row, live, status);
+    if (!canRecord()) box.append(h('span', { class: 'f-h', text: 'Запись с микрофона и камеры работает, когда сайт открыт по https. Пока можно загрузить готовый файл.' }));
+    else box.append(h('span', { class: 'f-h', text: `До ${maxSec} секунд.` }));
+    return box;
   }
 
   // ---------- шаги ----------
@@ -176,6 +272,8 @@
         textInput('ask.yes', 'Текст кнопки «Да»', { max: 30 }),
         emojiPicker('Стикер', cfg.ask.sticker, (e) => set('ask.sticker', e, true)),
         photoField(),
+        mediaField('voice'),
+        mediaField('video'),
         textArea('ask.noLinesText', 'Фразы на кнопке «Нет» (по одной в строке)', { max: 400, rows: 4, ph: 'Нет\nТочно?\nПодумай ещё', hint: 'Пусто — будут стандартные' })];
     },
     confirm() {
@@ -311,6 +409,7 @@
     $('#next').style.display = stepIdx === STEPS.length - 1 ? 'none' : '';
   }
   function renderPanel() {
+    stopRecording(false);
     const panel = $('#panel');
     const keep = panel.scrollTop;
     panel.innerHTML = '';
@@ -320,6 +419,7 @@
     panel.scrollTop = keep;
   }
   function goStep(i) {
+    stopRecording(false);
     stepIdx = Math.max(0, Math.min(STEPS.length - 1, i));
     saveDraft(); renderDots(); renderPanel(); refreshPreview();
     $('#panel').scrollTop = 0;
@@ -354,6 +454,10 @@
       if (d && d.cfg) { cfg = Object.assign(defaults(), d.cfg); stepIdx = Math.min(d.step || 0, STEPS.length - 1); }
       const q = (params.get('ask') || '').trim().slice(0, 140);
       if (q) cfg.ask.title = q;
+      const th = params.get('theme');
+      if (th && THEMES.some(([id]) => id === th)) cfg.theme = th;
+      // параметры убираем из адреса, чтобы перезагрузка не затёрла правки
+      if (params.has('ask') || params.has('theme')) history.replaceState(null, '', location.pathname);
     }
     goStep(stepIdx);
   }

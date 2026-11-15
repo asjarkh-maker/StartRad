@@ -4,7 +4,7 @@
   const token = location.pathname.split('/').pop();
   const params = new URLSearchParams(location.search);
   const root = document.getElementById('own');
-  let timer = 0;
+  let timer = 0, checks = 0, meta = { receipt: false, days: 30 };
 
   function h(tag, attrs, ...kids) {
     const el = document.createElement(tag);
@@ -31,6 +31,7 @@
     const link = `${location.origin}/i/${d.slug}`;
     const a = d.answer, answered = Boolean(a && a.finishedAt);
     root.innerHTML = '';
+    if (params.get('paid') && d.paid) root.append(h('div', { class: 'banner', text: 'Оплата прошла — ссылка готова 💌' }));
     if (params.get('new')) root.append(h('div', { class: 'banner', text: 'Приглашение создано! Сохраните эту страницу в закладки — здесь появится ответ.' }));
     if (params.get('saved')) root.append(h('div', { class: 'banner', text: 'Изменения сохранены. Ссылка осталась прежней.' }));
     root.append(h('h1', { text: `Приглашение для ${d.config.toName}` }));
@@ -45,11 +46,14 @@
     // 2. ссылка / оплата
     if (!d.paid) {
       const err = h('div', { class: 'error' });
-      const pay = h('button', { class: 'btn', type: 'button', text: `Получить ссылку — ${d.price} ₽` });
+      const checking = Boolean(params.get('paid')) && d.payment && d.payment.status === 'pending' && checks < 20;
+      if (d.payment && d.payment.status === 'canceled') err.textContent = 'Оплата не прошла. Можно попробовать ещё раз.';
+      const email = meta.receipt ? h('input', { class: 'inp', type: 'email', placeholder: 'Почта для чека', autocomplete: 'email', style: 'margin-bottom:12px' }) : null;
+      const pay = h('button', { class: 'btn', type: 'button', text: checking ? 'Проверяем оплату…' : `Получить ссылку — ${d.price} ₽`, disabled: checking });
       pay.addEventListener('click', async () => {
         pay.disabled = true; err.textContent = '';
         try {
-          const r = await fetch(`/api/m/${token}/pay`, { method: 'POST' });
+          const r = await fetch(`/api/m/${token}/pay`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: email ? email.value.trim() : '' }) });
           const j = await r.json().catch(() => ({}));
           if (j.confirmationUrl) { location.href = j.confirmationUrl; return; }
           if (!r.ok) throw new Error(j.error || 'Ошибка оплаты');
@@ -57,7 +61,11 @@
         } catch (e) { err.textContent = e.message; pay.disabled = false; }
       });
       root.append(h('div', { class: 'card' }, h('div', { class: 'step-title' }, h('span', { class: 'step-num', text: '2' }), 'Получите ссылку для отправки'),
-        h('p', { style: 'color:var(--muted);margin:0 0 16px', text: 'Ссылка работает, пока вы её не удалите. Отправьте её в любой мессенджер.' }), pay, err));
+        h('p', { style: 'color:var(--muted);margin:0 0 16px', text: `Ссылка будет работать ${meta.days || 30} дней. Отправьте её в любой мессенджер.` }),
+        email, pay, err,
+        h('p', { class: 'f-h' }, 'Нажимая кнопку, вы принимаете ', h('a', { href: '/oferta', target: '_blank', text: 'оферту' }), ' и ',
+          h('a', { href: '/privacy', target: '_blank', text: 'политику конфиденциальности' }), '.')));
+      if (checking) { checks++; clearTimeout(timer); timer = setTimeout(checkPayment, 3000); }
       return;
     }
     const input = h('input', { class: 'inp', readonly: true, value: link, 'aria-label': 'Ссылка для отправки' });
@@ -65,7 +73,17 @@
     copyBtn.addEventListener('click', () => copy(link, copyBtn));
     root.append(h('div', { class: 'card' }, h('div', { class: 'step-title' }, h('span', { class: 'step-num', text: '2' }), 'Отправьте ссылку'),
       h('div', { class: 'linkbox' }, input, copyBtn),
+      d.expiresAt ? h('p', { class: d.expired ? 'error' : 'f-h', text: d.expired ? `Срок действия ссылки истёк ${fmtTime(d.expiresAt)}. Получатель её больше не откроет.` : `Ссылка работает до ${fmtTime(d.expiresAt)}.` }) : null,
       h('p', { class: 'f-h', text: 'Сами ссылку не открывайте — просмотр засчитается как открытие. Для проверки есть превью.' })));
+
+    // уведомления в Telegram
+    if (d.telegram) {
+      root.append(h('div', { class: 'card' }, h('div', { class: 'step-title' }, '🔔 Ответ в Telegram'),
+        d.telegram.linked
+          ? h('p', { style: 'margin:0', text: '✅ Уведомления включены — бот напишет, когда приглашение откроют и ответят.' })
+          : [h('p', { style: 'color:var(--muted);margin:0 0 14px', text: 'Бот пришлёт сообщение, когда приглашение откроют и ответят.' }),
+            h('a', { class: 'btn btn-ghost btn-sm', href: d.telegram.link, target: '_blank', rel: 'noopener', text: 'Получать ответ в Telegram' })]));
+    }
 
     // 3. ответ
     const box = h('div', { class: 'card' }, h('div', { class: 'step-title' }, h('span', { class: 'step-num', text: '3' }), 'Ответ'),
@@ -95,6 +113,12 @@
     Player.mount(wrap.querySelector('#pv'), window.__cfg, { mode: 'preview' });
   }
 
+  // после возврата с оплаты: спросить сервер, прошёл ли платёж
+  async function checkPayment() {
+    try { await fetch(`/api/m/${encodeURIComponent(token)}/pay`); } catch (e) { /* повторим */ }
+    load();
+  }
+
   async function load() {
     try {
       const r = await fetch(`/api/m/${encodeURIComponent(token)}`);
@@ -104,5 +128,7 @@
       render(d);
     } catch (e) { timer = setTimeout(load, 8000); }
   }
-  load();
+  fetch('/api/meta').then((r) => r.json()).then((m) => { meta = m; }).catch(() => {}).finally(() => {
+    if (params.get('paid')) checkPayment(); else load();
+  });
 })();

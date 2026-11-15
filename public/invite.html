@@ -8,6 +8,7 @@
 </head>
 <body>
 <div id="root"></div>
+<script src="/vendor/lottie_light.min.js"></script>
 <script src="/js/player.js"></script>
 <script>
 (function () {
@@ -30,7 +31,7 @@
   fetch('/api/i/' + encodeURIComponent(slug)).then(function (r) {
     return r.json().then(function (d) { return { ok: r.ok, status: r.status, d: d }; });
   }).then(function (res) {
-    if (!res.ok) return msg('✉️', res.status === 404 ? 'Приглашение не найдено' : 'Приглашение пока недоступно');
+    if (!res.ok) return res.status === 410 ? msg('⏳', 'Срок действия приглашения истёк', 'Попросите отправителя создать новое') : msg('✉️', res.status === 404 ? 'Приглашение не найдено' : 'Приглашение пока недоступно');
     if (res.d.answered) return msg('💖', 'Ответ уже отправлен', 'Осталось дождаться встречи 😊');
     document.title = 'Тебе письмо 💌';
     var seen = false;
