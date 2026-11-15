@@ -43,3 +43,14 @@ bash deploy/setup-ubuntu.sh example.ru me@mail.ru # домен + HTTPS
 ```
 
 Скрипт ставит Node.js и nginx, запускает сайт как службу `tolko-da` и сам стартует после перезагрузки.
+
+## Установка на Windows-сервер
+
+В PowerShell от администратора, из папки проекта:
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass -Force
+.\deploy\setup-windows.ps1
+```
+
+Скрипт ставит Node.js (через winget), открывает порт в брандмауэре и создаёт задачу `TolkoDa`, которая запускает сайт при старте сервера. Сайт будет на порту 80; другой порт задаётся параметром `-Port`.
