@@ -11,6 +11,10 @@
 
 ## Запуск
 
+На Windows: установите [Node.js](https://nodejs.org) (LTS) и дважды щёлкните `start.bat` — сайт откроется на http://localhost:3000.
+
+Из командной строки:
+
 ```bash
 npm install
 npm start          # http://localhost:3000
