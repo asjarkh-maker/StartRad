@@ -16,7 +16,7 @@ $src = (Get-ChildItem $tmp -Directory | Select-Object -First 1).FullName
 
 Write-Host "==> Копирую в $dir"
 New-Item -ItemType Directory -Force $dir | Out-Null
-robocopy $src $dir /MIR /XD data node_modules /NFL /NDL /NJH /NJS | Out-Null
+robocopy $src $dir /MIR /XD data node_modules caddy /XF domain.txt run-server.cmd server.log /NFL /NDL /NJH /NJS | Out-Null
 if ($LASTEXITCODE -ge 8) { throw "Не удалось скопировать файлы (robocopy: $LASTEXITCODE)" }
 
 powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $dir 'deploy\setup-windows.ps1')
