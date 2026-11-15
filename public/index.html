@@ -57,7 +57,16 @@
     .final .btn { background: #fff; color: var(--pink); box-shadow: 0 16px 30px -14px rgba(0, 0, 0, .35); }
     .final .st { position: absolute; width: 90px; height: 90px; opacity: .9; }
     @media (max-width: 960px) { .occ { grid-template-columns: repeat(2, 1fr); } .feat { grid-template-columns: repeat(2, 1fr); } }
-    @media (max-width: 640px) { .feat, .occ, .price { grid-template-columns: 1fr; } .final .st { display: none; } }
+    @media (max-width: 640px) {
+      .price { grid-template-columns: 1fr; } .final .st { display: none; }
+      .feat, .occ { grid-template-columns: 1fr 1fr; gap: 10px; }
+      .feat .card, .occ a { padding: 14px; border-radius: 18px; }
+      .feat h3, .occ h3 { font-size: 15px; }
+      .feat p, .occ p { font-size: 14px; line-height: 1.4; }
+      .st { width: 46px; height: 46px; font-size: 34px; line-height: 46px; }
+      .how-grid { gap: 10px; }
+      .sec { padding: 20px 0 46px; }
+    }
   </style>
 </head>
 <body>
