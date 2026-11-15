@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Создать приглашение — Только да</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="wrap">
+    <header class="header">
+      <a class="logo" href="/">
+        <span class="logo-mark"><svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.2C.8 8.3 2.9 4.5 6.6 4.5c2.1 0 3.6 1.2 4.4 2.5.8-1.3 2.3-2.5 4.4-2.5 3.7 0 5.8 3.8 4.2 7.3C19.5 16.4 12 21 12 21z"/></svg></span>
+        <span>только <span class="accent">да</span></span>
+      </a>
+    </header>
+
+    <main class="page">
+      <h1>Собери приглашение 💌</h1>
+      <p class="lead">Три минуты — и можно отправлять. Собрать и посмотреть — бесплатно.</p>
+
+      <div class="builder">
+        <form class="card" id="form" autocomplete="off">
+          <div class="step">
+            <div class="step-title"><span class="step-num">1</span>Кому и от кого</div>
+            <div class="row">
+              <div><label for="toName">Кого приглашаешь</label><input id="toName" maxlength="40" placeholder="Аня" required></div>
+              <div><label for="fromName">Твоё имя (необязательно)</label><input id="fromName" maxlength="40" placeholder="Саша"></div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-title"><span class="step-num">2</span>Письмо</div>
+            <label for="message">Тёплые слова</label>
+            <textarea id="message" maxlength="600" placeholder="Я давно хотел тебя позвать куда-нибудь вдвоём…"></textarea>
+            <label for="question" style="margin-top:14px">Главный вопрос</label>
+            <input id="question" maxlength="120" value="Пойдёшь со мной на свидание?">
+          </div>
+
+          <div class="step">
+            <div class="step-title"><span class="step-num">3</span>Когда</div>
+            <div class="add-row">
+              <input id="dateInput" maxlength="40" placeholder="Суббота, 19:00">
+              <button type="button" class="btn btn-ghost" data-add="dates">Добавить</button>
+            </div>
+            <div class="chips" id="datesChips"></div>
+            <div class="hint">Предложи до 6 вариантов. Можно оставить пустым — тогда дату выберет получатель.</div>
+          </div>
+
+          <div class="step">
+            <div class="step-title"><span class="step-num">4</span>Где</div>
+            <div class="add-row">
+              <input id="placeInput" maxlength="60" placeholder="Кофейня на набережной">
+              <button type="button" class="btn btn-ghost" data-add="places">Добавить</button>
+            </div>
+            <div class="chips" id="placesChips"></div>
+            <div class="hint">Тоже до 6 вариантов. Пусто — место предложит получатель.</div>
+          </div>
+
+          <div class="step">
+            <div class="step-title"><span class="step-num">5</span>Оформление</div>
+            <div class="themes">
+              <div class="theme-opt active" data-theme="pink">Розовое</div>
+              <div class="theme-opt" data-theme="peach">Персик</div>
+              <div class="theme-opt" data-theme="night">Вечер</div>
+            </div>
+          </div>
+        </form>
+
+        <aside class="card sticky">
+          <div class="step-title">Готово?</div>
+          <p style="color:var(--muted);margin:0 0 20px">Сначала посмотри, как приглашение увидит получатель. Ссылку для отправки получишь на следующем шаге.</p>
+          <button class="btn" id="submit" style="width:100%">Посмотреть приглашение</button>
+          <div class="error" id="error"></div>
+        </aside>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const state = { dates: [], places: [], theme: 'pink' };
+    const $ = id => document.getElementById(id);
+    const inputs = { dates: $('dateInput'), places: $('placeInput') };
+
+    function render(kind) {
+      const box = $(kind + 'Chips');
+      box.innerHTML = '';
+      state[kind].forEach((v, i) => {
+        const chip = document.createElement('span');
+        chip.className = 'chip';
+        chip.textContent = v;
+        const x = document.createElement('button');
+        x.type = 'button'; x.textContent = '×'; x.setAttribute('aria-label', 'Удалить');
+        x.onclick = () => { state[kind].splice(i, 1); render(kind); };
+        chip.appendChild(x);
+        box.appendChild(chip);
+      });
+    }
+    function add(kind) {
+      const v = inputs[kind].value.trim();
+      if (!v || state[kind].length >= 6 || state[kind].includes(v)) return;
+      state[kind].push(v);
+      inputs[kind].value = '';
+      render(kind);
+    }
+    document.querySelectorAll('[data-add]').forEach(b => b.onclick = () => add(b.dataset.add));
+    Object.entries(inputs).forEach(([kind, el]) =>
+      el.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); add(kind); } }));
+
+    document.querySelectorAll('.theme-opt').forEach(t => t.onclick = () => {
+      document.querySelectorAll('.theme-opt').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      state.theme = t.dataset.theme;
+    });
+
+    $('submit').onclick = async () => {
+      $('error').textContent = '';
+      // то, что набрано, но не добавлено кнопкой — тоже учитываем
+      add('dates'); add('places');
+      const body = {
+        toName: $('toName').value, fromName: $('fromName').value,
+        message: $('message').value, question: $('question').value,
+        dates: state.dates, places: state.places, theme: state.theme,
+      };
+      if (!body.toName.trim()) { $('error').textContent = 'Напиши, кого приглашаешь'; $('toName').focus(); return; }
+      $('submit').disabled = true;
+      try {
+        const r = await fetch('/api/invites', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Ошибка');
+        location.href = `/r/${data.id}?key=${data.key}`;
+      } catch (e) {
+        $('error').textContent = e.message || 'Не получилось сохранить, попробуй ещё раз';
+        $('submit').disabled = false;
+      }
+    };
+  </script>
+</body>
+</html>

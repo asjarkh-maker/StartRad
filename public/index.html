@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Онлайн-приглашение на свидание — Только да</title>
+  <meta name="description" content="Собери милое приглашение на свидание за 3 минуты и отправь ссылку. Кнопка «Нет» убегает, а ты сразу узнаешь ответ, дату и место встречи.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    .demo-letter { position: absolute; inset: 60px 18px 30px; display: none; flex-direction: column; justify-content: center; text-align: center; z-index: 1; }
+    .demo-letter.show { display: flex; animation: pop .45s ease; }
+    .demo-letter .letter { padding: 22px 16px; }
+    .demo-letter h2 { font-size: 19px; margin-bottom: 18px; }
+    .demo-answers { position: relative; height: 60px; }
+    .demo-answers .btn { padding: 15px 24px; font-size: 15px; position: absolute; top: 0; }
+    .demo-yes { left: 24px; }
+    .demo-no { right: 24px; background: #f3e7e9; color: var(--muted); box-shadow: none; transition: left .25s, top .25s; }
+    .demo-no:hover { transform: none; box-shadow: none; }
+    .how { padding: 20px 0 90px; }
+    .how h2 { font-family: 'Unbounded', sans-serif; font-weight: 800; font-size: clamp(28px, 4vw, 40px); letter-spacing: -.03em; margin: 0 0 30px; }
+    .how-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    .how-grid .card h3 { font-family: 'Unbounded', sans-serif; font-size: 18px; margin: 14px 0 8px; }
+    .how-grid .card p { color: var(--muted); margin: 0; }
+    .how-grid .step-num { width: 38px; height: 38px; font-size: 16px; }
+    .cta { text-align: center; margin-top: 40px; }
+    .footer { border-top: 1px solid var(--line); padding: 26px 0; color: var(--muted); font-size: 14px; }
+    @media (max-width: 880px) { .how-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="header">
+      <a class="logo" href="/">
+        <span class="logo-mark"><svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.2C.8 8.3 2.9 4.5 6.6 4.5c2.1 0 3.6 1.2 4.4 2.5.8-1.3 2.3-2.5 4.4-2.5 3.7 0 5.8 3.8 4.2 7.3C19.5 16.4 12 21 12 21z"/></svg></span>
+        <span>только <span class="accent">да</span></span>
+      </a>
+      <a class="btn btn-ghost" href="/create">Создать</a>
+    </header>
+
+    <section class="hero">
+      <div>
+        <h1>Онлайн-<br>приглашение<br><span class="accent">на свидание</span></h1>
+        <div class="subhead">где ответ — <span class="pill">только «да»</span></div>
+        <p class="lead">Собери милое приглашение за 3 минуты и отправь ссылку. Кнопка «Нет» убегает, а ты сразу узнаешь ответ, дату и место встречи.</p>
+        <a class="btn" href="/create">Создать приглашение 💌</a>
+        <p class="fineprint">Готово за 3 минуты · без регистрации · собрать и посмотреть — бесплатно, ссылка — <span id="price">490</span> ₽</p>
+      </div>
+
+      <div class="phone-wrap">
+        <div class="try">попробуй!
+          <svg width="70" height="30" viewBox="0 0 70 30" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M2 6c20 2 40 8 62 18"/><path d="M54 16l10 8-12 3"/></svg>
+        </div>
+        <div class="phone">
+          <div class="screen" id="screen">
+            <div class="hearts" aria-hidden="true">
+              <span style="left:12%;top:16%;font-size:22px">♥</span>
+              <span style="left:80%;top:30%;font-size:18px;animation-delay:1s">♥</span>
+              <span style="left:20%;top:78%;font-size:16px;animation-delay:2s">♥</span>
+              <span style="left:70%;top:86%;font-size:24px;animation-delay:.5s">♥</span>
+            </div>
+            <div class="envelope-scene" id="demoEnvelopeScene">
+              <div class="envelope" id="demoEnvelope" role="button" tabindex="0" aria-label="Открыть письмо">
+                <div class="body"></div><div class="flap"></div>
+                <div class="seal"><svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.2C.8 8.3 2.9 4.5 6.6 4.5c2.1 0 3.6 1.2 4.4 2.5.8-1.3 2.3-2.5 4.4-2.5 3.7 0 5.8 3.8 4.2 7.3C19.5 16.4 12 21 12 21z"/></svg></div>
+              </div>
+              <div class="envelope-text">Тебе письмо. Нажми на конверт 💌</div>
+            </div>
+            <div class="demo-letter" id="demoLetter">
+              <div class="letter">
+                <div class="to">Привет, Аня!</div>
+                <h2 id="demoQ">Пойдёшь со мной на свидание?</h2>
+                <div class="demo-answers" id="demoAnswers">
+                  <button class="btn demo-yes" id="demoYes">Да 💖</button>
+                  <button class="btn demo-no" id="demoNo">Нет</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="how">
+      <h2>Как это работает</h2>
+      <div class="how-grid">
+        <div class="card"><div class="step-num">1</div><h3>Собери приглашение</h3><p>Напиши имя, тёплые слова и предложи варианты даты и места.</p></div>
+        <div class="card"><div class="step-num">2</div><h3>Отправь ссылку</h3><p>В любой мессенджер. Получатель открывает конверт — и читает письмо.</p></div>
+        <div class="card"><div class="step-num">3</div><h3>Узнай ответ</h3><p>Кнопка «Нет» убегает, так что ответ один. Дату и место увидишь сразу.</p></div>
+      </div>
+      <div class="cta"><a class="btn" href="/create">Создать приглашение 💌</a></div>
+    </section>
+  </div>
+  <footer class="footer"><div class="wrap">© только да — приглашения, на которые отвечают «да»</div></footer>
+
+  <script>
+    fetch('/api/config').then(r => r.json()).then(c => { document.getElementById('price').textContent = c.price; }).catch(() => {});
+
+    const env = document.getElementById('demoEnvelope');
+    const scene = document.getElementById('demoEnvelopeScene');
+    const letter = document.getElementById('demoLetter');
+    function openDemo() {
+      env.classList.add('open');
+      setTimeout(() => { scene.style.display = 'none'; letter.classList.add('show'); }, 850);
+    }
+    env.addEventListener('click', openDemo);
+    env.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') openDemo(); });
+
+    const no = document.getElementById('demoNo');
+    const box = document.getElementById('demoAnswers');
+    function runAway() {
+      const w = box.clientWidth - no.offsetWidth;
+      no.style.left = Math.random() * w + 'px';
+      no.style.right = 'auto';
+      no.style.top = (Math.random() * 120 - 60) + 'px';
+    }
+    no.addEventListener('mouseenter', runAway);
+    no.addEventListener('touchstart', e => { e.preventDefault(); runAway(); }, { passive: false });
+    no.addEventListener('click', e => { e.preventDefault(); runAway(); });
+
+    document.getElementById('demoYes').addEventListener('click', () => {
+      document.getElementById('demoQ').textContent = 'Ура! Собери такое же для своего человека 💖';
+      box.innerHTML = '<a class="btn btn-small" href="/create">Создать</a>';
+      box.style.height = 'auto';
+    });
+  </script>
+</body>
+</html>

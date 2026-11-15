@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Твоё приглашение — Только да</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="wrap">
+    <header class="header">
+      <a class="logo" href="/">
+        <span class="logo-mark"><svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.2C.8 8.3 2.9 4.5 6.6 4.5c2.1 0 3.6 1.2 4.4 2.5.8-1.3 2.3-2.5 4.4-2.5 3.7 0 5.8 3.8 4.2 7.3C19.5 16.4 12 21 12 21z"/></svg></span>
+        <span>только <span class="accent">да</span></span>
+      </a>
+      <a class="btn btn-ghost" href="/create">Создать ещё</a>
+    </header>
+
+    <main class="page" style="max-width:640px">
+      <h1 id="title">Приглашение готово</h1>
+      <p class="lead">Сохрани эту страницу в закладки — здесь появится ответ.</p>
+
+      <div class="card" id="card">
+        <div class="step">
+          <div class="step-title"><span class="step-num">1</span>Посмотри, как это увидят</div>
+          <a class="btn btn-ghost" id="previewLink" target="_blank">Открыть предпросмотр ↗</a>
+        </div>
+
+        <div class="step" id="payStep">
+          <div class="step-title"><span class="step-num">2</span>Получи ссылку для отправки</div>
+          <p style="color:var(--muted);margin:0 0 16px">Ссылка работает, пока не придёт ответ, и остаётся с вами навсегда.</p>
+          <button class="btn" id="payBtn">Получить ссылку — <span id="price">490</span> ₽</button>
+          <div class="error" id="error"></div>
+        </div>
+
+        <div class="step" id="linkStep" hidden>
+          <div class="step-title"><span class="step-num">2</span>Отправь ссылку</div>
+          <div class="linkbox">
+            <input id="link" readonly>
+            <button class="btn btn-small" id="copyBtn">Скопировать</button>
+          </div>
+          <div class="hint">Отправь её в любой мессенджер. Только не открывай сам — иначе посчитаем как просмотр 😉</div>
+        </div>
+
+        <div class="step" id="statsStep" hidden>
+          <div class="step-title"><span class="step-num">3</span>Ответ</div>
+          <div class="stats">
+            <div class="stat"><b id="opened">0</b><span>открытий</span></div>
+            <div class="stat"><b id="noAttempts">0</b><span>попыток нажать «Нет»</span></div>
+            <div class="stat"><b id="status">—</b><span>статус</span></div>
+          </div>
+          <div class="answer-box" id="answerBox" hidden></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    const id = location.pathname.split('/').pop();
+    const key = new URLSearchParams(location.search).get('key');
+    const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+    $('previewLink').href = `/i/${id}?key=${key}`;
+    $('link').value = `${location.origin}/i/${id}`;
+
+    async function load() {
+      const r = await fetch(`/api/invites/${id}/result?key=${encodeURIComponent(key || '')}`);
+      if (!r.ok) {
+        $('title').textContent = 'Приглашение не найдено';
+        $('card').innerHTML = '<p>Проверь ссылку — возможно, она скопирована не целиком.</p>';
+        return false;
+      }
+      const d = await r.json();
+      $('price').textContent = d.price;
+      $('title').textContent = `Приглашение для ${d.toName}`;
+      $('payStep').hidden = d.paid;
+      $('linkStep').hidden = !d.paid;
+      $('statsStep').hidden = !d.paid;
+      $('opened').textContent = d.opened;
+      $('noAttempts').textContent = d.noAttempts;
+      $('status').textContent = d.answer ? 'Да! 💖' : (d.opened ? 'Читает…' : 'Ждём');
+      if (d.answer) {
+        const a = d.answer;
+        $('answerBox').hidden = false;
+        $('answerBox').innerHTML =
+          `<h3>${esc(d.toName)} ответил(а) «да» 💖</h3>` +
+          (a.date ? `<p><b>Когда:</b> ${esc(a.date)}</p>` : '') +
+          (a.place ? `<p><b>Где:</b> ${esc(a.place)}</p>` : '') +
+          (a.note ? `<p><b>Пожелание:</b> ${esc(a.note)}</p>` : '') +
+          `<p class="hint">${new Date(a.at).toLocaleString('ru-RU')}</p>`;
+      }
+      return !d.answer;
+    }
+
+    $('payBtn').onclick = async () => {
+      $('error').textContent = '';
+      $('payBtn').disabled = true;
+      try {
+        const r = await fetch(`/api/invites/${id}/pay`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key }) });
+        const d = await r.json();
+        if (d.confirmationUrl) { location.href = d.confirmationUrl; return; }
+        if (!r.ok) throw new Error(d.error || 'Ошибка оплаты');
+        await load();
+      } catch (e) {
+        $('error').textContent = e.message;
+      } finally {
+        $('payBtn').disabled = false;
+      }
+    };
+
+    $('copyBtn').onclick = async () => {
+      try { await navigator.clipboard.writeText($('link').value); }
+      catch { $('link').select(); document.execCommand('copy'); }
+      $('copyBtn').textContent = 'Скопировано ✓';
+      setTimeout(() => { $('copyBtn').textContent = 'Скопировать'; }, 1800);
+    };
+
+    // обновляем ответ, пока его нет
+    (async function poll() { if (await load()) setTimeout(poll, 10000); })();
+  </script>
+</body>
+</html>

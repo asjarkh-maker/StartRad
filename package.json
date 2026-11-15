@@ -1,0 +1,15 @@
+{
+  "name": "tolko-da",
+  "version": "1.0.0",
+  "description": "Онлайн-приглашение на свидание, где ответ — только «да»",
+  "main": "server.js",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "dev": "PAYMENT_MODE=dev node server.js"
+  },
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
