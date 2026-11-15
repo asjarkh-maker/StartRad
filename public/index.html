@@ -26,6 +26,38 @@
     .cta { text-align: center; margin-top: 40px; }
     .footer { border-top: 1px solid var(--line); padding: 26px 0; color: var(--muted); font-size: 14px; }
     @media (max-width: 880px) { .how-grid { grid-template-columns: 1fr; } }
+    .sec { padding: 30px 0 70px; }
+    .sec h2 { font-family: 'Unbounded', sans-serif; font-weight: 800; font-size: clamp(28px, 4vw, 40px); letter-spacing: -.03em; line-height: 1.1; margin: 0 0 12px; }
+    .sec h2 .accent { color: var(--pink); }
+    .sec .sub { color: var(--muted); font-size: 18px; margin: 0 0 30px; max-width: 620px; }
+    .feat { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    .feat .card { padding: 24px; }
+    .feat h3, .occ h3 { font-family: 'Unbounded', sans-serif; font-size: 18px; letter-spacing: -.01em; margin: 10px 0 8px; }
+    .feat p, .occ p { color: var(--muted); margin: 0; }
+    .st { width: 64px; height: 64px; font-size: 48px; line-height: 64px; text-align: center; }
+    .st.on { font-size: 0; }
+    .occ { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    .occ a { display: block; text-decoration: none; color: var(--ink); background: #fff; border-radius: var(--radius); padding: 22px; box-shadow: 0 20px 50px -34px rgba(36, 20, 25, .45); border: 2px solid transparent; transition: transform .15s, border-color .15s; }
+    .occ a:hover { transform: translateY(-3px); border-color: var(--pink); }
+    .occ b { display: inline-block; margin-top: 12px; color: var(--pink); font-size: 14px; }
+    .price { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .price .card { padding: 28px; }
+    .price .tag { font-family: 'Unbounded', sans-serif; font-weight: 800; font-size: 34px; letter-spacing: -.03em; margin: 4px 0 14px; }
+    .price ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+    .price li { padding-left: 28px; position: relative; }
+    .price li::before { content: '✓'; position: absolute; left: 0; color: var(--pink); font-weight: 800; }
+    .price .paid { background: linear-gradient(150deg, #fff 0%, #ffeef3 100%); border: 2px solid #ffc3d3; }
+    .faqs { max-width: 760px; }
+    .faqs details { background: #fff; border-radius: 16px; padding: 16px 20px; margin-bottom: 10px; }
+    .faqs summary { font-weight: 700; cursor: pointer; }
+    .faqs p { color: var(--muted); margin: 10px 0 0; }
+    .final { text-align: center; color: #fff; background: linear-gradient(120deg, var(--pink), var(--orange)); border-radius: 32px; padding: 54px 24px; margin: 10px 0 70px; position: relative; overflow: hidden; }
+    .final h2 { color: #fff; margin-bottom: 10px; }
+    .final p { margin: 0 0 26px; opacity: .92; font-size: 18px; }
+    .final .btn { background: #fff; color: var(--pink); box-shadow: 0 16px 30px -14px rgba(0, 0, 0, .35); }
+    .final .st { position: absolute; width: 90px; height: 90px; opacity: .9; }
+    @media (max-width: 960px) { .occ { grid-template-columns: repeat(2, 1fr); } .feat { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 640px) { .feat, .occ, .price { grid-template-columns: 1fr; } .final .st { display: none; } }
   </style>
 </head>
 <body>
@@ -89,12 +121,93 @@
         <div class="card"><div class="step-num">2</div><h3>Отправь ссылку</h3><p>В любой мессенджер. Получатель открывает конверт — и читает письмо.</p></div>
         <div class="card"><div class="step-num">3</div><h3>Узнай ответ</h3><p>Кнопка «Нет» убегает, так что ответ один. Дату и место увидишь сразу.</p></div>
       </div>
-      <div class="cta"><a class="btn" href="/create">Создать приглашение 💌</a></div>
+    </section>
+
+    <section class="sec">
+      <h2>Что внутри <span class="accent">приглашения</span></h2>
+      <p class="sub">Не открытка, а маленькое интерактивное письмо. Всё собирается в конструкторе с живым превью.</p>
+      <div class="feat">
+        <div class="card"><div class="st" data-st="1f48c" aria-hidden="true">💌</div><h3>Письмо в конверте</h3><p>Получатель открывает его касанием — как настоящее.</p></div>
+        <div class="card"><div class="st" data-st="1f648" aria-hidden="true">🙈</div><h3>«Нет» убегает</h3><p>Кнопку не поймать, а «Да» с каждой попыткой становится больше.</p></div>
+        <div class="card"><div class="st" data-st="1f48b" aria-hidden="true">💋</div><h3>Голосовое и кружок</h3><p>Запишите пару слов или короткое видео — прямо в браузере.</p></div>
+        <div class="card"><div class="st" data-st="1f970" aria-hidden="true">🥰</div><h3>Фото и стикеры</h3><p>Ваше фото и десятки анимированных стикеров, пять цветовых тем.</p></div>
+        <div class="card"><div class="st" data-st="23f0" aria-hidden="true">⏰</div><h3>Дата и время</h3><p>Получатель сам выбирает, когда удобно. Без долгих переписок.</p></div>
+        <div class="card"><div class="st" data-st="1f37f" aria-hidden="true">🍿</div><h3>Куда пойдём</h3><p>До трёх вопросов с вариантами: кино, кофе, прогулка, что поесть.</p></div>
+      </div>
+    </section>
+
+    <section class="sec">
+      <h2>Повод <span class="accent">найдётся</span></h2>
+      <p class="sub">Готовые идеи и тексты — возьмите любой и поменяйте под себя.</p>
+      <div class="occ">
+        <a href="/dlya-devushki"><div class="st" data-st="1f339" aria-hidden="true">🌹</div><h3>Для девушки</h3><p>Позвать так, чтобы она улыбнулась ещё до ответа.</p><b>Идеи →</b></a>
+        <a href="/dlya-parnya"><div class="st" data-st="1f60e" aria-hidden="true">😎</div><h3>Для парня</h3><p>Сделать первый шаг легко и с юмором.</p><b>Идеи →</b></a>
+        <a href="/14-fevralya"><div class="st" data-st="1f498" aria-hidden="true">💘</div><h3>14 февраля</h3><p>Валентинка, на которую отвечают.</p><b>Идеи →</b></a>
+        <a href="/godovshchina"><div class="st" data-st="1f49e" aria-hidden="true">💞</div><h3>Годовщина</h3><p>Вспомнить начало и позвать отметить.</p><b>Идеи →</b></a>
+      </div>
+    </section>
+
+    <section class="sec">
+      <h2>Сколько <span class="accent">стоит</span></h2>
+      <p class="sub">Платите только тогда, когда приглашение готово и нравится.</p>
+      <div class="price">
+        <div class="card">
+          <div class="p-name">Собрать и посмотреть</div>
+          <div class="tag">Бесплатно</div>
+          <ul><li>Конструктор со всеми возможностями</li><li>Живое превью — как увидит получатель</li><li>Без регистрации, черновик сохраняется</li></ul>
+        </div>
+        <div class="card paid">
+          <div class="p-name">Ссылка для отправки</div>
+          <div class="tag"><span class="js-price">490</span>&nbsp;₽</div>
+          <ul><li>Ссылка работает <span class="js-days">30</span> дней</li><li>Ответ, дата и выбор — сразу на вашей странице</li><li>Уведомления в Telegram</li><li>Можно поправить приглашение после отправки</li></ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec">
+      <h2>Вопросы</h2>
+      <div class="faqs">
+        <details><summary>Нужно ли регистрироваться?</summary><p>Нет. После создания вы получите личную ссылку на страницу с ответом — сохраните её в закладки.</p></details>
+        <details><summary>Что увидит получатель?</summary><p>Письмо в конверте. Открывает — читает ваши слова, отвечает на вопрос, выбирает дату и варианты. Ничего устанавливать не нужно, всё работает в браузере телефона.</p></details>
+        <details><summary>Узнает ли он или она, сколько раз нажимал «Нет»?</summary><p>Нет, это видите только вы — на странице с ответом.</p></details>
+        <details><summary>Можно ли изменить приглашение после отправки?</summary><p>Да. Изменения сохраняются в той же ссылке, отправлять заново не нужно.</p></details>
+        <details><summary>Как оплатить?</summary><p>Картой или через СБП на защищённой странице ЮKassa. Подробнее — на странице <a href="/payment">«Оплата и возврат»</a>.</p></details>
+      </div>
+    </section>
+
+    <section class="final">
+      <div class="st" style="left:6%;top:18%" data-st="1f48c" aria-hidden="true">💌</div>
+      <div class="st" style="right:6%;bottom:14%" data-st="1f496" aria-hidden="true">💖</div>
+      <h2>Осталось только отправить</h2>
+      <p>Три минуты — и у вас будет приглашение, на которое отвечают «да».</p>
+      <a class="btn" href="/create">Создать приглашение 💌</a>
     </section>
   </div>
   <!--FOOTER-->
 
+  <script src="/vendor/lottie_light.min.js" defer></script>
   <script>
+    // анимированные стикеры: загружаем, когда блок появляется на экране
+    window.addEventListener('load', function () {
+      if (!window.lottie || !('IntersectionObserver' in window)) return;
+      var io = new IntersectionObserver(function (list) {
+        list.forEach(function (e) {
+          if (!e.isIntersecting) return;
+          io.unobserve(e.target);
+          var el = e.target;
+          fetch('/st/' + el.dataset.st + '.json').then(function (r) { return r.ok ? r.json() : null; }).then(function (data) {
+            if (!data) return;
+            el.textContent = ''; el.classList.add('on');
+            lottie.loadAnimation({ container: el, renderer: 'svg', loop: true, autoplay: true, animationData: data });
+          }).catch(function () {});
+        });
+      }, { rootMargin: '120px' });
+      document.querySelectorAll('[data-st]').forEach(function (el) { io.observe(el); });
+    });
+    fetch('/api/meta').then(function (r) { return r.json(); }).then(function (m) {
+      document.querySelectorAll('.js-price').forEach(function (e) { e.textContent = m.price; });
+      document.querySelectorAll('.js-days').forEach(function (e) { e.textContent = m.days; });
+    }).catch(function () {});
     fetch('/api/config').then(r => r.json()).then(c => { document.getElementById('price').textContent = c.price; }).catch(() => {});
 
     const env = document.getElementById('demoEnvelope');
