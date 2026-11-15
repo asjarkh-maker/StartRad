@@ -1,224 +1,46 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="robots" content="noindex">
-  <title>Тебе письмо 💌</title>
-  <meta property="og:title" content="Тебе письмо 💌">
-  <meta property="og:description" content="Открой конверт">
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/styles.css">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">
+<meta property="og:title" content="Тебе письмо 💌"><meta property="og:description" content="Открой конверт">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/app.css">
+<title>Тебе письмо 💌</title>
 </head>
 <body>
-  <div class="invite-page theme-pink" id="page">
-    <div class="hearts" aria-hidden="true" id="hearts"></div>
-    <div class="stage" id="stage"></div>
-  </div>
-
-  <script>
-    const $ = id => document.getElementById(id);
-    const id = location.pathname.split('/').pop();
-    const key = new URLSearchParams(location.search).get('key');
-    const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-    const HEART = '<svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.2C.8 8.3 2.9 4.5 6.6 4.5c2.1 0 3.6 1.2 4.4 2.5.8-1.3 2.3-2.5 4.4-2.5 3.7 0 5.8 3.8 4.2 7.3C19.5 16.4 12 21 12 21z"/></svg>';
-    const stage = $('stage');
-    let inv, preview = false;
-    const answer = { date: '', place: '', note: '' };
-
-    // фоновые сердечки
-    for (let i = 0; i < 12; i++) {
-      const s = document.createElement('span');
-      s.textContent = '♥';
-      s.style.cssText = `left:${Math.random() * 95}%;top:${Math.random() * 95}%;font-size:${14 + Math.random() * 18}px;animation-delay:${Math.random() * 4}s`;
-      $('hearts').appendChild(s);
-    }
-
-    function show(html) { stage.innerHTML = html; }
-
-    function screenEnvelope() {
-      show(`
-        <div class="envelope-scene">
-          <div class="envelope" id="env" role="button" tabindex="0" aria-label="Открыть письмо">
-            <div class="body"></div><div class="flap"></div><div class="seal">${HEART}</div>
-          </div>
-          <div class="envelope-text">${esc(inv.toName)}, тебе письмо. Нажми на конверт 💌</div>
-        </div>`);
-      const env = $('env');
-      const open = () => { env.classList.add('open'); setTimeout(screenLetter, 850); };
-      env.onclick = open;
-      env.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') open(); };
-    }
-
-    function screenLetter() {
-      show(`
-        <div class="letter">
-          <div class="to">Привет, ${esc(inv.toName)}!</div>
-          ${inv.message ? `<p class="msg">${esc(inv.message)}</p>` : ''}
-          ${inv.fromName ? `<div class="from">— ${esc(inv.fromName)}</div>` : ''}
-          <h2>${esc(inv.question)}</h2>
-          <div class="answers">
-            <button class="btn" id="yes">Да 💖</button>
-            <button class="btn btn-no" id="no">Нет</button>
-          </div>
-        </div>`);
-      const no = $('no');
-      let tries = 0;
-      const phrases = ['Нет', 'Точно?', 'Подумай ещё', 'Не-а 🙈', 'Не поймаешь', 'Ну пожалуйста'];
-      function runAway(e) {
-        if (e) e.preventDefault();
-        tries++;
-        if (!no.classList.contains('runaway')) {
-          const r = no.getBoundingClientRect();
-          no.style.left = r.left + 'px'; no.style.top = r.top + 'px';
-          no.classList.add('runaway');
-        }
-        no.textContent = phrases[tries % phrases.length];
-        // кнопка «Да» становится всё больше
-        const yes = $('yes');
-        const scale = Math.min(1 + tries * 0.06, 1.4);
-        yes.style.transform = `scale(${scale})`;
-        // ищем свободное место: не поверх «Да» и подальше от пальца/курсора
-        const pad = 12, gap = 24;
-        const w = no.offsetWidth, h = no.offsetHeight;
-        const maxX = Math.max(pad, window.innerWidth - w - pad);
-        const maxY = Math.max(pad, window.innerHeight - h - pad);
-        // размер «Да» считаем по итоговому масштабу, а не посреди анимации
-        const yr = yes.getBoundingClientRect();
-        const cx = yr.left + yr.width / 2, cy = yr.top + yr.height / 2;
-        const hw = yes.offsetWidth * scale / 2, hh = yes.offsetHeight * scale / 2;
-        const y = { left: cx - hw, right: cx + hw, top: cy - hh, bottom: cy + hh };
-        const cur = no.getBoundingClientRect();
-        let best = null, bestScore = -1;
-        for (let i = 0; i < 200; i++) {
-          const x = pad + Math.random() * (maxX - pad);
-          const t = pad + Math.random() * (maxY - pad);
-          const hitsYes = x < y.right + gap && x + w > y.left - gap && t < y.bottom + gap && t + h > y.top - gap;
-          if (hitsYes) continue;
-          const score = Math.hypot(x - cur.left, t - cur.top);
-          if (score > bestScore) { best = { x, t }; bestScore = score; }
-          if (score > 120) break;
-        }
-        if (!best) {
-          // свободного места нет — уходим в самый дальний от «Да» угол
-          const corners = [[pad, pad], [maxX, pad], [pad, maxY], [maxX, maxY]];
-          best = corners
-            .map(([x, t]) => ({ x, t, d: Math.hypot(x + w / 2 - cx, t + h / 2 - cy) }))
-            .sort((a, b) => b.d - a.d)[0];
-        }
-        no.style.left = best.x + 'px'; no.style.top = best.t + 'px';
-        if (!preview) fetch(`/api/invites/${id}/no`, { method: 'POST' }).catch(() => {});
-      }
-      no.addEventListener('mouseenter', runAway);
-      no.addEventListener('touchstart', runAway, { passive: false });
-      no.addEventListener('click', runAway);
-      $('yes').onclick = () => screenChoose('date');
-    }
-
-    function screenChoose(kind, custom = !(kind === 'date' ? inv.dates : inv.places).length) {
-      const opts = kind === 'date' ? inv.dates : inv.places;
-      const title = kind === 'date' ? 'Ура! Когда тебе удобно?' : 'А где встретимся?';
-      const ph = kind === 'date' ? 'Например, в субботу вечером' : 'Например, кино или парк';
-      show(`
-        <div class="letter">
-          <div class="big-emoji">${kind === 'date' ? '🗓️' : '📍'}</div>
-          <h2>${title}</h2>
-          <div class="options" id="opts">
-            ${opts.map((o, i) => `<button class="option" data-i="${i}">${esc(o)}</button>`).join('')}
-          </div>
-          <input id="own" maxlength="${kind === 'date' ? 60 : 80}" placeholder="${custom ? ph : 'Свой вариант'}" style="margin-bottom:18px">
-          <button class="btn" id="next" style="width:100%">Дальше</button>
-        </div>`);
-      let picked = '';
-      document.querySelectorAll('.option').forEach(b => b.onclick = () => {
-        document.querySelectorAll('.option').forEach(x => x.classList.remove('active'));
-        b.classList.add('active');
-        picked = opts[b.dataset.i];
-        $('own').value = '';
-      });
-      $('own').oninput = () => { document.querySelectorAll('.option').forEach(x => x.classList.remove('active')); picked = ''; };
-      $('next').onclick = () => {
-        const v = $('own').value.trim() || picked;
-        if (!v) { $('own').focus(); $('own').placeholder = 'Выбери вариант или напиши свой'; return; }
-        answer[kind] = v;
-        kind === 'date' ? screenChoose('place') : screenNote();
-      };
-    }
-
-    function screenNote() {
-      show(`
-        <div class="letter">
-          <div class="big-emoji">💌</div>
-          <h2>Хочешь что-нибудь добавить?</h2>
-          <textarea id="note" maxlength="300" placeholder="Необязательно"></textarea>
-          <button class="btn" id="send" style="width:100%;margin-top:18px">Отправить ответ</button>
-          <div class="error" id="err"></div>
-        </div>`);
-      $('send').onclick = async () => {
-        answer.note = $('note').value.trim();
-        if (preview) return screenDone();
-        $('send').disabled = true;
-        try {
-          const r = await fetch(`/api/invites/${id}/answer`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(answer) });
-          if (!r.ok) throw new Error();
-          screenDone();
-        } catch {
-          $('err').textContent = 'Не получилось отправить, попробуй ещё раз';
-          $('send').disabled = false;
-        }
-      };
-    }
-
-    function screenDone() {
-      show(`
-        <div class="letter">
-          <div class="big-emoji">💖</div>
-          <h2>Это свидание!</h2>
-          <p class="msg" style="text-align:center">
-            ${answer.date ? `<b>${esc(answer.date)}</b><br>` : ''}
-            ${answer.place ? `${esc(answer.place)}` : ''}
-          </p>
-          <p style="color:var(--muted);margin:0 0 20px">${inv.fromName ? esc(inv.fromName) + ' уже' : 'Уже'} знает ответ 😊</p>
-          <a class="btn btn-ghost" href="/">Создать своё приглашение</a>
-        </div>`);
-      confetti();
-    }
-
-    function screenAlready() {
-      show(`<div class="letter"><div class="big-emoji">💖</div><h2>Ответ уже отправлен</h2><p class="msg" style="text-align:center">Осталось дождаться встречи 😊</p><a class="btn btn-ghost" href="/">Создать своё приглашение</a></div>`);
-    }
-
-    function screenError(text) {
-      show(`<div class="letter"><div class="big-emoji">✉️</div><h2>${esc(text)}</h2><a class="btn btn-ghost" href="/">На главную</a></div>`);
-    }
-
-    function confetti() {
-      for (let i = 0; i < 200; i++) {
-        const h = document.createElement('span');
-        h.textContent = ['♥', '💖', '✨', '💕'][i % 4];
-        h.style.cssText = `position:fixed;left:${Math.random() * 100}vw;top:-30px;font-size:${16 + Math.random() * 20}px;color:#ff3d6e;z-index:30;pointer-events:none;transition:transform ${2 + Math.random() * 2}s ease-in, opacity 4s`;
-        document.body.appendChild(h);
-        requestAnimationFrame(() => { h.style.transform = `translateY(${window.innerHeight + 60}px) rotate(${Math.random() * 360}deg)`; h.style.opacity = '0.2'; });
-        setTimeout(() => h.remove(), 4500);
-      }
-    }
-
-    (async () => {
-      const r = await fetch(`/api/invites/${id}${key ? `?key=${encodeURIComponent(key)}` : ''}`);
-      const d = await r.json().catch(() => ({}));
-      if (!r.ok) return screenError(d.error || 'Приглашение не найдено');
-      inv = d;
-      preview = d.preview;
-      $('page').className = `invite-page theme-${d.theme}`;
-      if (preview) {
-        const bar = document.createElement('div');
-        bar.className = 'preview-bar';
-        bar.innerHTML = `Это предпросмотр — ответы не сохраняются. <a href="/r/${id}?key=${encodeURIComponent(key)}">Вернуться к приглашению</a>`;
-        document.body.appendChild(bar);
-      }
-      if (d.answered && !preview) return screenAlready();
-      screenEnvelope();
-    })();
-  </script>
+<div id="root"></div>
+<script src="/js/player.js"></script>
+<script>
+(function () {
+  var slug = location.pathname.split('/').pop();
+  var root = document.getElementById('root');
+  function msg(emoji, text, sub) {
+    root.className = 'inv-msg';
+    root.innerHTML = '';
+    var box = document.createElement('div');
+    var a = document.createElement('div'); a.className = 'big'; a.textContent = emoji;
+    var b = document.createElement('h1'); b.textContent = text;
+    box.append(a, b);
+    if (sub) { var c = document.createElement('p'); c.textContent = sub; box.append(c); }
+    root.append(box);
+  }
+  function send(type, data) {
+    var body = JSON.stringify({ type: type, data: data || {} });
+    try { fetch('/api/i/' + slug + '/event', { method: 'POST', headers: { 'content-type': 'application/json' }, body: body, keepalive: true }); } catch (e) {}
+  }
+  fetch('/api/i/' + encodeURIComponent(slug)).then(function (r) {
+    return r.json().then(function (d) { return { ok: r.ok, status: r.status, d: d }; });
+  }).then(function (res) {
+    if (!res.ok) return msg('✉️', res.status === 404 ? 'Приглашение не найдено' : 'Приглашение пока недоступно');
+    if (res.d.answered) return msg('💖', 'Ответ уже отправлен', 'Осталось дождаться встречи 😊');
+    document.title = 'Тебе письмо 💌';
+    var seen = false;
+    try { seen = sessionStorage.getItem('opened:' + slug) === '1'; } catch (e) {}
+    Player.mount(root, res.d.config, { mode: 'live', onEvent: function (type, data) {
+      if (type === 'open') { if (seen) return; seen = true; try { sessionStorage.setItem('opened:' + slug, '1'); } catch (e) {} }
+      send(type, data);
+    } });
+  }).catch(function () { msg('📡', 'Не удалось загрузить', 'Проверьте интернет и обновите страницу'); });
+})();
+</script>
 </body>
 </html>
