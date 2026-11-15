@@ -34,3 +34,12 @@ npm start          # http://localhost:3000
 
 - **Оплата.** В `server.js`, обработчик `/api/invites/:id/pay`, оставлено место под платёжную систему (например, ЮKassa): создать платёж, вернуть `confirmationUrl`, а `paid = true` выставлять в webhook.
 - **Точное совпадение с оригиналом.** Тексты и вёрстка собраны по одному скриншоту главной страницы; остальные экраны сделаны по смыслу.
+
+## Установка на сервер (Ubuntu/Debian)
+
+```bash
+bash deploy/setup-ubuntu.sh                       # по IP-адресу
+bash deploy/setup-ubuntu.sh example.ru me@mail.ru # домен + HTTPS
+```
+
+Скрипт ставит Node.js и nginx, запускает сайт как службу `tolko-da` и сам стартует после перезагрузки.
