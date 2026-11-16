@@ -102,8 +102,12 @@
     const input = h('input', { class: 'inp', readonly: true, value: link, 'aria-label': 'Ссылка для отправки' });
     const copyBtn = h('button', { class: 'btn btn-sm', type: 'button', text: 'Скопировать' });
     copyBtn.addEventListener('click', () => { copy(link, copyBtn); goal('link_share'); });
+    const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent('Тебе письмо 💌')}`;
+    const shareBtn = h('a', { class: 'btn btn-ghost btn-sm', href: shareUrl, target: '_blank', rel: 'noopener', text: '✈️ Отправить в Telegram' });
+    shareBtn.addEventListener('click', (e) => { goal('link_share'); if (window.TG && window.TG.inside) { e.preventDefault(); window.TG.openTg(shareUrl); } });
     root.append(h('div', { class: 'card' }, h('div', { class: 'step-title' }, h('span', { class: 'step-num', text: '2' }), 'Отправьте ссылку'),
       h('div', { class: 'linkbox' }, input, copyBtn),
+      h('div', { class: 'own-actions' }, shareBtn),
       d.expiresAt ? h('p', { class: d.expired ? 'error' : 'f-h', text: d.expired ? `Срок действия ссылки истёк ${fmtTime(d.expiresAt)}. Получатель её больше не откроет.` : `Ссылка работает до ${fmtTime(d.expiresAt)}.` }) : null,
       h('p', { class: 'f-h', text: 'Сами ссылку не открывайте — просмотр засчитается как открытие. Для проверки есть превью.' })));
 

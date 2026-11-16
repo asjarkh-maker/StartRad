@@ -247,8 +247,18 @@ app.post('/api/inv', rate('create', 20, 3600e3), (req, res) => {
     stats: { opens: 0, noClicks: 0 }, answer: null, tgCode: newTgCode(), tgChats: [],
   };
   if (paymentMode() === 'off') markPaid(inv);
+  // создано в мини-приложении Telegram: подтверждаем пользователя и сразу подключаем уведомления
+  const tgUser = telegram.verifyInitData((req.body || {}).tg);
+  if (tgUser) inv.tgChats = [tgUser.id];
   db[inv.slug] = inv; byToken.set(inv.token, inv); byTgCode.set(inv.tgCode, inv); save();
-  res.json({ slug: inv.slug, owner: inv.token });
+  if (tgUser) {
+    const base = S().site.url || `${req.protocol}://${req.get('host')}`;
+    const ownerUrl = `${base}/m/${inv.token}`;
+    telegram.sendTo(tgUser.id,
+      `💌 Приглашение для <b>${telegram.esc(config.toName)}</b> создано.\nЕго страница — ответ, статистика и ссылка для отправки: <a href="${telegram.esc(ownerUrl)}">открыть</a>\nСохраните это сообщение.`,
+      /^https:\/\//.test(ownerUrl) ? { reply_markup: { inline_keyboard: [[{ text: 'Открыть приглашение', web_app: { url: ownerUrl } }]] } } : {});
+  }
+  res.json({ slug: inv.slug, owner: inv.token, telegram: Boolean(tgUser) });
 });
 
 const TOKEN_RE = /^[a-f0-9]{36}$/;
@@ -394,7 +404,7 @@ app.post('/api/i/:slug/event', rate('event', 300, 3600e3), (req, res) => {
 // ---- админка ----
 admin.routes(app, {
   status: () => ({ bot: telegram.username() || null, payment: paymentMode(), version: version() || null }),
-  onSaved: (patch) => { if (patch.telegram) telegram.kick(); },
+  onSaved: (patch) => { if (patch.telegram) telegram.kick(); else if (patch.site && patch.site.url !== undefined) telegram.setupMenu(); },
 });
 
 const page = (name) => (req, res) => sendHtml(res, name, 200, true, true, { webvisor: false });

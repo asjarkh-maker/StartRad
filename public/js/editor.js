@@ -328,8 +328,10 @@
     delete out.ask.noLinesText;
     for (const q of out.choices) q.items = q.items.filter((it) => it.name.trim());
     try {
+      // в мини-приложении Telegram — подтверждение пользователя, чтобы сразу подключить уведомления
+      const tg = !editToken && window.TG && window.TG.inside ? await Promise.race([window.TG.ready, new Promise((r) => setTimeout(r, 3000))]).then(() => window.TG.initData) : '';
       const r = await fetch(editToken ? `/api/m/${editToken}` : '/api/inv', {
-        method: editToken ? 'PUT' : 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ config: out }),
+        method: editToken ? 'PUT' : 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(tg ? { config: out, tg } : { config: out }),
       });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(d.error || 'Не удалось сохранить');
