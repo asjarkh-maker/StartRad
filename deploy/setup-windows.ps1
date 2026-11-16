@@ -50,7 +50,6 @@ $runCmd = Join-Path $app 'run-server.cmd'
 @echo off
 cd /d "$app"
 set PORT=$sitePort
-set PAYMENT_MODE=dev
 "$node" server.js >> server.log 2>&1
 "@ | Set-Content -Encoding ASCII $runCmd
 
