@@ -248,7 +248,7 @@
     function confirm() {
       const c = cfg.confirm || {};
       return h('div', { class: 'pl-screen pl-center' }, picture(c, '🥰'),
-        h('h2', { class: 'pl-title', text: fill(c.title) || 'Ура! Я так рад(а)!' }),
+        h('h2', { class: 'pl-title', text: fill(c.title) || 'Ура! Лучший ответ на свете 💖' }),
         c.text ? h('p', { class: 'pl-text', text: fill(c.text) }) : null,
         h('button', { class: 'pl-btn', type: 'button', text: c.button || 'Дальше', on: { click: next } }));
     }

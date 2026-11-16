@@ -35,7 +35,7 @@
     toName: '', fromName: '', theme: 'pink', photo: '',
     gate: { type: 'envelope', text: '' },
     ask: { title: 'Пойдёшь со мной на свидание?', text: '', sticker: '🥺', yes: 'Да 💖', noLines: [], noMode: 'run', yesFx: 'burst' },
-    confirm: { enabled: true, picture: 'sticker', photo: '', title: 'Ура! Я так рад(а)!', text: '', sticker: '🥰', button: 'Дальше' },
+    confirm: { enabled: true, picture: 'sticker', photo: '', title: 'Ура! Лучший ответ на свете 💖', text: '', sticker: '🥰', button: 'Дальше' },
     date: { enabled: true, mode: 'ask', fixedDate: '', fixedTime: '', chat: true, picture: 'sticker', photo: '', title: 'Когда тебе удобно?', text: 'Выбери день и время — я подстроюсь.', sticker: '💘' },
     choices: [{ title: 'Куда пойдём?', multi: false, items: [{ name: 'Парк', emoji: '🌳' }, { name: 'Ресторан', emoji: '🍽️' }, { name: 'Набережная', emoji: '🌅' }, { name: 'Уютный вечер дома', emoji: '🏠' }, { name: 'Кофейня', emoji: '☕' }, { name: 'Кино', emoji: '🎬' }] }],
     final: { title: 'Это свидание!', text: 'Жду нашей встречи 💞', sticker: '🥳' },
@@ -196,12 +196,12 @@
         textInput('gate.text', 'Подпись (необязательно)', { max: 80, ph: 'Тебе письмо. Нажми на конверт 💌' })];
     },
     ask() {
-      return [...panelHead('Главный вопрос', 'Кнопка «Нет» будет убегать — останется только «Да».'),
+      return [...panelHead('Главный вопрос', 'Сам вопрос и тёплые слова. Ниже выберите, как поведут себя кнопки «Да» и «Нет».'),
         textInput('ask.title', 'Вопрос', { max: 140 }),
-        textArea('ask.text', 'Тёплые слова', { max: 500, ph: 'Давно хотел позвать тебя куда-нибудь вдвоём…', hint: 'Можно писать {имя} — подставится имя получателя' }),
+        textArea('ask.text', 'Тёплые слова', { max: 500, ph: 'Давно хочу позвать тебя куда-нибудь вдвоём…', hint: 'Можно писать {имя} — подставится имя получателя' }),
         textInput('ask.yes', 'Текст кнопки «Да»', { max: 30 }),
         emojiPicker('Стикер', cfg.ask.sticker, (e) => set('ask.sticker', e, true)),
-        photoField(),
+        photoField('photo', 'Фото (необязательно) — будет вместо стикера'),
         optionGrid('Что делает кнопка «Нет»', 'ask.noMode', NO_MODES, 'run'),
         ['run', 'kiss'].includes(cfg.ask.noMode || 'run')
           ? textArea('ask.noLinesText', 'Фразы на кнопке «Нет» (по одной в строке)', { max: 400, rows: 4, ph: cfg.ask.noMode === 'kiss' ? 'Нет\nНу пожалуйста 🥺\nПодумай ещё разок 💋' : 'Нет\nТочно?\nПодумай ещё', hint: 'Пусто — будут стандартные' })
@@ -215,7 +215,7 @@
         switchRow('confirm.enabled', 'Показывать этот экран', 'Можно выключить и сразу перейти дальше')];
       if (!c.enabled) return list;
       list.push(...pictureField('confirm', '🥰'));
-      list.push(textInput('confirm.title', 'Заголовок', { max: 120, ph: 'Ура! Я так рад(а)!' }),
+      list.push(textInput('confirm.title', 'Заголовок', { max: 120, ph: 'Ура! Лучший ответ на свете 💖' }),
         textArea('confirm.text', 'Текст (необязательно)', { max: 400 }),
         textInput('confirm.button', 'Надпись на кнопке', { max: 30, ph: 'Дальше' }));
       return list;
@@ -334,7 +334,8 @@
       const d = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(d.error || 'Не удалось сохранить');
       try { localStorage.removeItem(DRAFT_KEY); } catch (e) { /* пусто */ }
-      location.href = `/m/${editToken || d.owner}${editToken ? '?saved=1' : '?new=1'}`;
+      if (!editToken) goal('create_done');
+      setTimeout(() => { location.href = `/m/${editToken || d.owner}${editToken ? '?saved=1' : '?new=1'}`; }, editToken ? 0 : 300);
     } catch (e) {
       box.textContent = e.message; submitting = false; btn.disabled = false; btn.textContent = editToken ? 'Сохранить изменения' : 'Создать приглашение 💌';
     }
@@ -396,7 +397,10 @@
   }
 
   $('#back').addEventListener('click', () => goStep(stepIdx - 1));
+  const goal = (g, p) => { try { window.goal && window.goal(g, p); } catch (e) { /* без Метрики */ } };
+  let started = false;
   $('#next').addEventListener('click', () => {
+    if (!started && !editToken && STEPS[stepIdx].id === 'who' && cfg.toName.trim()) { started = true; goal('create_start'); }
     if (STEPS[stepIdx].id === 'who' && !cfg.toName.trim()) { toast('Напишите, кого приглашаете'); $('#panel input')?.focus(); return; }
     goStep(stepIdx + 1);
   });

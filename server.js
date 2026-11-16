@@ -141,23 +141,31 @@ const PUB = path.join(__dirname, 'public');
 function version() {
   try { return fs.readFileSync(path.join(__dirname, '.deployed-sha'), 'utf8').trim().slice(0, 7); } catch { return ''; }
 }
-function inject(html, tracking = true) {
+function inject(html, tracking = true, opts = {}) {
   const st = S();
   const id = st.site.metrikaId;
-  const metrika = id ? `<script>(function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};m[i].l=1*new Date();for(var j=0;j<document.scripts.length;j++){if(document.scripts[j].src===r){return;}}k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})(window,document,"script","https://mc.yandex.ru/metrika/tag.js","ym");ym(${id},"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webvisor:true});</script><noscript><div><img src="https://mc.yandex.ru/watch/${id}" style="position:absolute;left:-9999px" alt=""></div></noscript>` : '';
+  // window.goal(...) есть всегда; без счётчика — пустышка. Секретный ключ владельца (/m/…) в Метрику не уходит.
+  const goalStub = `<script>window.dataLayer=window.dataLayer||[];window.goal=window.goal||function(){};</script>`;
+  const metrika = id ? `<script>(function(){
+var clean=function(u){return String(u||'').replace(new RegExp('/m/[A-Za-z0-9]+'),'/m/').replace(new RegExp('([?&]edit=)[^&#]*'),'$1x')};
+window.dataLayer=window.dataLayer||[];
+(function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};m[i].l=1*new Date();for(var j=0;j<document.scripts.length;j++){if(document.scripts[j].src===r){return;}}k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})(window,document,"script","https://mc.yandex.ru/metrika/tag.js","ym");
+ym(${id},"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webvisor:${opts.webvisor === false ? 'false' : 'true'},ecommerce:"dataLayer",url:clean(location.href),referrer:clean(document.referrer)});
+window.goal=function(g,p){try{ym(${id},"reachGoal",g,p||{})}catch(e){}};
+})();</script><noscript><div><img src="https://mc.yandex.ru/watch/${id}" style="position:absolute;left:-9999px" alt=""></div></noscript>` : goalStub;
   const cookie = `<script>(function(){try{if(localStorage.getItem('cookie-ok'))return}catch(e){}document.addEventListener('DOMContentLoaded',function(){var b=document.createElement('div');b.className='cookie';b.innerHTML='<span>Мы используем cookie${id ? ' и Яндекс Метрику' : ''}, чтобы сайт работал лучше. <a href="/privacy">Подробнее</a></span><button type="button">Понятно</button>';b.querySelector('button').onclick=function(){try{localStorage.setItem('cookie-ok','1')}catch(e){}b.remove()};document.body.appendChild(b)})})();</script>`;
-  if (!tracking) return html.replace('<!--FOOTER-->', pages.footer(version()));
+  if (!tracking) return html.replace('</head>', goalStub + '</head>').replace('<!--FOOTER-->', pages.footer(version()));
   return html.replace('</head>', metrika + '</head>').replace('</body>', cookie + '</body>').replace('<!--FOOTER-->', pages.footer(version()));
 }
-function sendHtml(res, file, status = 200, noindex = false, tracking = true) {
+function sendHtml(res, file, status = 200, noindex = false, tracking = true, opts = {}) {
   fs.readFile(path.join(PUB, file), 'utf8', (err, html) => {
     if (err) return res.status(500).end();
     if (noindex) { res.setHeader('X-Robots-Tag', 'noindex'); res.setHeader('Cache-Control', 'no-store'); }
-    res.status(status).type('html').send(inject(html, tracking));
+    res.status(status).type('html').send(inject(html, tracking, opts));
   });
 }
 app.get(['/', '/index.html'], (req, res) => sendHtml(res, 'index.html'));
-app.get(['/create', '/create.html'], (req, res) => sendHtml(res, 'create.html', 200, true));
+app.get(['/create', '/create.html'], (req, res) => sendHtml(res, 'create.html', 200, true, true, { webvisor: false }));
 for (const pg of pages.PAGES) app.get(pg.path, (req, res) => res.type('html').send(inject(pages.render(pg, S(), version()))));
 app.get('/version', (req, res) => res.type('text/plain').send(version() || 'неизвестна'));
 app.get('/robots.txt', (req, res) => {
@@ -342,7 +350,7 @@ app.post('/api/i/:slug/event', rate('event', 300, 3600e3), (req, res) => {
   switch (type) {
     case 'open':
       inv.stats.opens += 1;
-      if (inv.stats.opens === 1) telegram.notify(inv, `💌 <b>${telegram.esc(inv.config.toName)}</b> открыл(а) приглашение`);
+      if (inv.stats.opens === 1) telegram.notify(inv, `💌 <b>${telegram.esc(inv.config.toName)}</b> открывает ваше приглашение`);
       break;
     case 'no': inv.stats.noClicks += 1; break;
     case 'yes': a.yesAt = a.yesAt || new Date().toISOString(); break;
@@ -358,19 +366,19 @@ app.post('/api/i/:slug/event', rate('event', 300, 3600e3), (req, res) => {
       // отказ возможен только в режиме «Честный ответ» и только один раз
       if (inv.config.ask.noMode !== 'honest' || a.finishedAt || a.declinedAt) break;
       a.declinedAt = new Date().toISOString();
-      telegram.notify(inv, `🙂 <b>${telegram.esc(inv.config.toName)}</b> честно ответил(а) «нет»`);
+      telegram.notify(inv, `🙂 Ответ от <b>${telegram.esc(inv.config.toName)}</b>: честное «нет»`);
       break;
     case 'final':
       if (!a.finishedAt && !a.declinedAt) {
         a.finishedAt = new Date().toISOString();
-        const lines = [`💖 <b>${telegram.esc(inv.config.toName)}</b> сказал(а) «да»!`];
+        const lines = [`💖 <b>${telegram.esc(inv.config.toName)}</b> — «да»!`];
         if (a.date && a.date.chat) lines.push('🗓 Время обсудите в чате');
         else if (a.date && a.date.date) {
           const [y, m, dd] = a.date.date.split('-').map(Number);
           const when = new Date(y, m - 1, dd).toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
           lines.push(`🗓 ${telegram.esc(when)}${a.date.time ? ', ' + telegram.esc(a.date.time) : ''}`);
         }
-        for (const c of a.choices || []) if (c) lines.push(`✨ ${telegram.esc(c.title || 'Выбор')}: ${telegram.esc(c.picks.join(', '))}`);
+        for (const c of a.choices || []) if (c) lines.push(`✨ ${telegram.esc((c.title || 'Выбор').replace(/[?:.!]+$/, ''))} — ${telegram.esc(c.picks.join(', '))}`);
         lines.push(`🙈 Попыток нажать «Нет»: ${inv.stats.noClicks}`);
         if (S().site.url) lines.push(`\n<a href="${telegram.esc(S().site.url)}/m/${inv.token}">Открыть приглашение</a>`);
         telegram.notify(inv, lines.join('\n'));
@@ -389,7 +397,7 @@ admin.routes(app, {
   onSaved: (patch) => { if (patch.telegram) telegram.kick(); },
 });
 
-const page = (name) => (req, res) => sendHtml(res, name, 200, true);
+const page = (name) => (req, res) => sendHtml(res, name, 200, true, true, { webvisor: false });
 // личное приглашение: без Метрики и без плашки cookie поверх экрана
 app.get('/i/:slug', (req, res) => sendHtml(res, 'invite.html', 200, true, false));
 app.get('/m/:token', page('owner.html'));

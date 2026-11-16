@@ -67,6 +67,14 @@
       .how-grid { gap: 10px; }
       .sec { padding: 20px 0 46px; }
     }
+    .mine { padding: 0 0 50px; }
+    .mine h2 { font-family: 'Unbounded', sans-serif; font-weight: 800; font-size: clamp(24px, 3.4vw, 32px); letter-spacing: -.03em; margin: 0 0 6px; }
+    .mine .sub { color: var(--muted); margin: 0 0 18px; }
+    .mine-list { display: flex; flex-wrap: wrap; gap: 10px; }
+    .mine-list a { display: inline-flex; align-items: center; gap: 8px; background: #fff; border-radius: 999px; padding: 12px 18px; text-decoration: none; color: var(--ink); font-weight: 700; box-shadow: 0 12px 30px -24px rgba(36, 20, 25, .5); border: 2px solid transparent; }
+    .mine-list a:hover { border-color: var(--pink); }
+    .mine-list small { color: var(--muted); font-weight: 500; }
+    [hidden] { display: none !important; }
   </style>
 </head>
 <body>
@@ -83,7 +91,7 @@
       <div>
         <h1>Онлайн-<br>приглашение<br><span class="accent">на свидание</span></h1>
         <div class="subhead">где ответ — <span class="pill">только «да»</span></div>
-        <p class="lead">Собери милое приглашение за 3 минуты и отправь ссылку. Кнопка «Нет» убегает, а ты сразу узнаешь ответ, дату и место встречи.</p>
+        <p class="lead">Соберите милое приглашение за 3 минуты и отправьте ссылку. Кнопка «Нет» убегает, а вы сразу узнаете ответ, дату и место встречи.</p>
         <a class="btn" href="/create">Создать приглашение 💌</a>
         <p class="fineprint">Готово за 3 минуты · без регистрации · собрать и посмотреть — бесплатно, ссылка — <span id="price">490</span> ₽</p>
         <p class="fineprint"><a href="/dlya-devushki">Для девушки</a> · <a href="/dlya-parnya">Для парня</a> · <a href="/14-fevralya">14 февраля</a> · <a href="/godovshchina">Годовщина</a></p>
@@ -123,12 +131,18 @@
       </div>
     </section>
 
+    <section class="mine" id="mine" hidden>
+      <h2>Ваши приглашения</h2>
+      <p class="sub">Сохранены в этом браузере — откройте, чтобы увидеть ответ.</p>
+      <div class="mine-list" id="mineList"></div>
+    </section>
+
     <section class="how">
       <h2>Как это работает</h2>
       <div class="how-grid">
-        <div class="card"><div class="step-num">1</div><h3>Собери приглашение</h3><p>Напиши имя, тёплые слова и предложи варианты даты и места.</p></div>
-        <div class="card"><div class="step-num">2</div><h3>Отправь ссылку</h3><p>В любой мессенджер. Получатель открывает конверт — и читает письмо.</p></div>
-        <div class="card"><div class="step-num">3</div><h3>Узнай ответ</h3><p>Кнопка «Нет» убегает, так что ответ один. Дату и место увидишь сразу.</p></div>
+        <div class="card"><div class="step-num">1</div><h3>Соберите приглашение</h3><p>Имя, тёплые слова, фото или стикер, варианты даты и места.</p></div>
+        <div class="card"><div class="step-num">2</div><h3>Отправьте ссылку</h3><p>В любой мессенджер. Получатель открывает конверт — и читает письмо.</p></div>
+        <div class="card"><div class="step-num">3</div><h3>Узнайте ответ</h3><p>Кнопка «Нет» убегает — остаётся только «Да». Дату и место вы увидите сразу.</p></div>
       </div>
     </section>
 
@@ -213,6 +227,21 @@
       }, { rootMargin: '120px' });
       document.querySelectorAll('[data-st]').forEach(function (el) { io.observe(el); });
     });
+    // «Ваши приглашения» из этого браузера
+    (function () {
+      var list = [];
+      try { list = JSON.parse(localStorage.getItem('tolkoda:mine') || '[]'); } catch (e) {}
+      if (!list.length) return;
+      var box = document.getElementById('mineList');
+      list.slice(0, 12).forEach(function (x) {
+        if (!/^[a-f0-9]{36}$/.test(x.token)) return;
+        var a = document.createElement('a'); a.href = '/m/' + x.token;
+        a.append('💌 ' + (x.toName || 'Приглашение') + ' ');
+        var sm = document.createElement('small'); sm.textContent = new Date(x.t).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+        a.append(sm); box.append(a);
+      });
+      if (box.children.length) document.getElementById('mine').hidden = false;
+    })();
     fetch('/api/meta').then(function (r) { return r.json(); }).then(function (m) {
       document.querySelectorAll('.js-price').forEach(function (e) { e.textContent = m.price; });
       document.querySelectorAll('.js-days').forEach(function (e) { e.textContent = m.days; });
