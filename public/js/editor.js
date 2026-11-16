@@ -258,7 +258,8 @@
         h('div', { class: 'f' }, h('span', { class: 'f-l', text: 'Оформление' }),
           h('div', { class: 'themes' }, THEMES.map(([id, name, color]) => h('button', {
             type: 'button', class: 'theme' + (cfg.theme === id ? ' on' : ''), on: { click: () => set('theme', id, true) },
-          }, h('i', { style: `background:${color}` }), name))))];
+          }, h('i', { style: `background:${color}` }), name)))),
+        emojiPicker('Стикер на приглашении', cfg.ask.sticker, (e) => set('ask.sticker', e, true))];
     },
     gate() {
       return [...panelHead('Как откроется приглашение', 'Первое, что увидит получатель.'),
