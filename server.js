@@ -175,6 +175,7 @@ app.use(express.static(PUB, { index: false }));
 const meta = () => ({
   price: S().price, pay: paymentMode() !== 'off', days: S().linkDays, bot: telegram.username() || null,
   receipt: paymentMode() === 'yookassa' && Boolean(S().yookassa.receipt),
+  version: version() || null,
 });
 app.get('/api/meta', (req, res) => res.json(meta()));
 app.get('/api/config', (req, res) => res.json({ price: S().price, paymentRequired: paymentMode() !== 'off' })); // для главной
