@@ -10,11 +10,19 @@ $dir = 'C:\tolko-da'
 $zip = Join-Path $env:TEMP 'tolko-da.zip'
 $tmp = Join-Path $env:TEMP 'tolko-da-x'
 
+# GitHub answers with a non-text content type, so PowerShell 5.1 may return bytes
+function Get-LatestSha($headers) {
+  $r = Invoke-WebRequest "https://api.github.com/repos/$repo/commits/$branch" -Headers $headers -UseBasicParsing -TimeoutSec 20
+  $c = $r.Content
+  if ($c -is [byte[]]) { $c = [Text.Encoding]::ASCII.GetString($c) }
+  return ([string]$c).Trim()
+}
+
 $headers = @{ 'User-Agent' = 'tolko-da-updater'; 'Accept' = 'application/vnd.github.sha' }
 $tokenFile = Join-Path $dir 'data\github-token.txt'
 if (Test-Path $tokenFile) { $headers['Authorization'] = 'Bearer ' + (Get-Content $tokenFile -Raw).Trim() }
 if (-not $Sha) {
-  $Sha = (Invoke-WebRequest "https://api.github.com/repos/$repo/commits/$branch" -Headers $headers -UseBasicParsing).Content.Trim()
+  $Sha = Get-LatestSha $headers
 }
 if ($Sha -notmatch '^[0-9a-f]{40}$') { throw "Unexpected version id: $Sha" }
 
