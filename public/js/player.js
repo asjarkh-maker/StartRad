@@ -95,7 +95,7 @@
     const names = () => cfg.toName || '';
     const fill = (t) => String(t || '')
       .replace(/\{имя\}|\{name\}/gi, names())
-      .replace(/\{дата\}|\{date\}/gi, answers.date ? prettyDate(answers.date.date, answers.date.time) : '')
+      .replace(/\{дата\}|\{date\}/gi, answers.date ? (answers.date.chat ? 'обсудим в чате' : prettyDate(answers.date.date, answers.date.time)) : '')
       .replace(/\{выбор\}|\{choice\}/gi, answers.picks.flat().filter(Boolean).join(', '));
 
     function show(id) {
@@ -238,12 +238,16 @@
       return wrap;
     }
 
+    // картинка экрана: стикер, своё фото или ничего
+    function picture(c, def) {
+      const pic = c.picture || 'sticker';
+      if (pic === 'photo') return c.photo ? h('img', { class: 'pl-photo', src: `/u/${c.photo}`, alt: '' }) : null;
+      return pic === 'sticker' ? sticker(c.sticker || def, 'big') : null;
+    }
+
     function confirm() {
       const c = cfg.confirm || {};
-      const pic = c.picture || 'sticker';
-      const img = pic === 'photo' && c.photo ? h('img', { class: 'pl-photo', src: `/u/${c.photo}`, alt: '' })
-        : pic === 'sticker' ? sticker(c.sticker || '🥰', 'big') : null;
-      return h('div', { class: 'pl-screen pl-center' }, img,
+      return h('div', { class: 'pl-screen pl-center' }, picture(c, '🥰'),
         h('h2', { class: 'pl-title', text: fill(c.title) || 'Ура! Я так рад(а)!' }),
         c.text ? h('p', { class: 'pl-text', text: fill(c.text) }) : null,
         h('button', { class: 'pl-btn', type: 'button', text: c.button || 'Дальше', on: { click: next } }));
@@ -251,20 +255,30 @@
 
     function date() {
       const d = cfg.date || {};
+      const pick = (val) => { answers.date = val; emit('date', val); next(); };
+      const chatBtn = d.chat !== false
+        ? h('button', { class: 'pl-btn pl-btn-soft', type: 'button', text: 'Решим в чате 💬', on: { click: () => pick({ chat: true }) } })
+        : null;
+      if (d.mode === 'fixed' && d.fixedDate) {
+        return h('div', { class: 'pl-screen pl-center' }, picture(d, '💘'),
+          h('h2', { class: 'pl-title', text: fill(d.title) || 'Как тебе такое время?' }),
+          d.text ? h('p', { class: 'pl-text', text: fill(d.text) }) : null,
+          h('div', { class: 'pl-when' }, prettyDate(d.fixedDate, d.fixedTime)),
+          h('button', { class: 'pl-btn', type: 'button', text: 'Подходит 👍', on: { click: () => pick({ date: d.fixedDate, time: d.fixedTime || '' }) } }),
+          chatBtn);
+      }
       const di = h('input', { type: 'date', class: 'pl-input', min: todayISO(), 'aria-label': 'Дата' });
       const ti = h('input', { type: 'time', class: 'pl-input', 'aria-label': 'Время' });
-      const btn = h('button', { class: 'pl-btn', type: 'button', text: 'Выбрать' });
       const err = h('div', { class: 'pl-err' });
+      const btn = h('button', { class: 'pl-btn', type: 'button', text: 'Выбрать это время' });
       btn.addEventListener('click', () => {
         if (!di.value) { err.textContent = 'Выбери день'; di.focus(); return; }
-        answers.date = { date: di.value, time: ti.value };
-        emit('date', answers.date);
-        next();
+        pick({ date: di.value, time: ti.value });
       });
-      return h('div', { class: 'pl-screen pl-center' }, sticker(d.sticker || '🗓️', 'big'),
+      return h('div', { class: 'pl-screen pl-center' }, picture(d, '💘'),
         h('h2', { class: 'pl-title', text: fill(d.title) || 'Когда тебе удобно?' }),
         d.text ? h('p', { class: 'pl-text', text: fill(d.text) }) : null,
-        h('div', { class: 'pl-row' }, di, ti), err, btn);
+        h('div', { class: 'pl-row' }, di, ti), err, btn, chatBtn);
     }
 
     function choice(i) {
@@ -299,7 +313,7 @@
     function final() {
       const f = cfg.final || {};
       const rows = [];
-      if (answers.date) rows.push(['🗓️', prettyDate(answers.date.date, answers.date.time)]);
+      if (answers.date) rows.push(['🗓️', answers.date.chat ? 'Время обсудим в чате' : prettyDate(answers.date.date, answers.date.time)]);
       (cfg.choices || []).forEach((q, i) => { if (answers.picks[i]) rows.push([q.items.find((it) => answers.picks[i].includes(it.name))?.emoji || '✨', answers.picks[i].join(', ')]); });
       const sum = rows.length ? h('div', { class: 'pl-sum' }, rows.map(([e, t]) => h('div', { class: 'pl-sum-row' }, h('span', { text: e }), h('span', { text: t })))) : null;
       emit('final');

@@ -99,7 +99,16 @@ function normalizeConfig(raw) {
       title: s(confirm.title, 120), text: s(confirm.text, 400), sticker: s(confirm.sticker, 16),
       button: s(confirm.button, 30),
     },
-    date: { enabled: date.enabled !== false, title: s(date.title, 120), text: s(date.text, 300), sticker: s(date.sticker, 16) },
+    date: {
+      enabled: date.enabled !== false,
+      mode: date.mode === 'fixed' && /^\d{4}-\d{2}-\d{2}$/.test(date.fixedDate || '') ? 'fixed' : 'ask',
+      fixedDate: /^\d{4}-\d{2}-\d{2}$/.test(date.fixedDate || '') ? date.fixedDate : '',
+      fixedTime: /^\d{2}:\d{2}$/.test(date.fixedTime || '') ? date.fixedTime : '',
+      chat: date.chat !== false,
+      picture: ['sticker', 'photo', 'none'].includes(date.picture) ? date.picture : 'sticker',
+      photo: uploaded(date.photo, ['jpg', 'png', 'webp', 'gif']),
+      title: s(date.title, 120), text: s(date.text, 300), sticker: s(date.sticker, 16),
+    },
     choices: arr(c.choices, 3).map((q) => {
       q = obj(q);
       return {
@@ -330,7 +339,7 @@ app.post('/api/i/:slug/event', rate('event', 300, 3600e3), (req, res) => {
       break;
     case 'no': inv.stats.noClicks += 1; break;
     case 'yes': a.yesAt = a.yesAt || new Date().toISOString(); break;
-    case 'date': a.date = { date: s(d.date, 10), time: s(d.time, 5) }; break;
+    case 'date': a.date = d.chat ? { chat: true } : { date: s(d.date, 10), time: s(d.time, 5) }; break;
     case 'choices': {
       const i = Number(d.index);
       if (Number.isInteger(i) && i >= 0 && i < 3) {
@@ -348,7 +357,8 @@ app.post('/api/i/:slug/event', rate('event', 300, 3600e3), (req, res) => {
       if (!a.finishedAt && !a.declinedAt) {
         a.finishedAt = new Date().toISOString();
         const lines = [`💖 <b>${telegram.esc(inv.config.toName)}</b> сказал(а) «да»!`];
-        if (a.date && a.date.date) {
+        if (a.date && a.date.chat) lines.push('🗓 Время обсудите в чате');
+        else if (a.date && a.date.date) {
           const [y, m, dd] = a.date.date.split('-').map(Number);
           const when = new Date(y, m - 1, dd).toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
           lines.push(`🗓 ${telegram.esc(when)}${a.date.time ? ', ' + telegram.esc(a.date.time) : ''}`);

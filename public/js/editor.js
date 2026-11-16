@@ -26,7 +26,7 @@
   ];
   const STICKERS = ['🥺', '🥰', '😍', '😳', '🤭', '🙈', '😘', '😻', '🥳', '😊', '🤗', '😎', '🤩', '😇', '💘', '💖', '💝', '💞', '💕', '💌', '💋', '🌹', '💐', '🌷', '🎉', '🎁', '⏰', '🍷', '🥂', '✨', '🔥', '🦋', '💃', '🐱', '🐻', '🦄', '🍿', '🎬', '☕', '🎂', '🌈'];
   const PRESETS = {
-    'Куда пойдём': { title: 'Куда пойдём?', items: [['Кино', '🎬'], ['Кофейня', '☕'], ['Прогулка', '🌳'], ['Выставка', '🎨'], ['Каток', '⛸️'], ['Набережная', '🌅']] },
+    'Куда пойдём': { title: 'Куда пойдём?', items: [['Парк', '🌳'], ['Ресторан', '🍽️'], ['Набережная', '🌅'], ['Уютный вечер дома', '🏠'], ['Кофейня', '☕'], ['Кино', '🎬']] },
     'Что поедим': { title: 'Что будем есть?', items: [['Пицца', '🍕'], ['Суши', '🍣'], ['Паста', '🍝'], ['Бургеры', '🍔'], ['Десерты', '🍰'], ['Стейк', '🥩']] },
     'Чем займёмся': { title: 'Чем займёмся?', items: [['Боулинг', '🎳'], ['Квест', '🧩'], ['Караоке', '🎤'], ['Настолки', '🎮'], ['Танцы', '💃'], ['Пикник', '🧺']] },
   };
@@ -36,8 +36,8 @@
     gate: { type: 'envelope', text: '' },
     ask: { title: 'Пойдёшь со мной на свидание?', text: '', sticker: '🥺', yes: 'Да 💖', noLines: [], noMode: 'run', yesFx: 'burst' },
     confirm: { enabled: true, picture: 'sticker', photo: '', title: 'Ура! Я так рад(а)!', text: '', sticker: '🥰', button: 'Дальше' },
-    date: { enabled: true, title: 'Когда тебе удобно?', text: 'Выбери день и время — я подстроюсь.', sticker: '🗓️' },
-    choices: [{ title: 'Куда пойдём?', multi: false, items: [{ name: 'Кино', emoji: '🎬' }, { name: 'Кофейня', emoji: '☕' }, { name: 'Прогулка', emoji: '🌳' }] }],
+    date: { enabled: true, mode: 'ask', fixedDate: '', fixedTime: '', chat: true, picture: 'sticker', photo: '', title: 'Когда тебе удобно?', text: 'Выбери день и время — я подстроюсь.', sticker: '💘' },
+    choices: [{ title: 'Куда пойдём?', multi: false, items: [{ name: 'Парк', emoji: '🌳' }, { name: 'Ресторан', emoji: '🍽️' }, { name: 'Набережная', emoji: '🌅' }, { name: 'Уютный вечер дома', emoji: '🏠' }, { name: 'Кофейня', emoji: '☕' }, { name: 'Кино', emoji: '🎬' }] }],
     final: { title: 'Это свидание!', text: 'Жду нашей встречи 💞', sticker: '🥳' },
   });
 
@@ -168,6 +168,16 @@
       status);
   }
 
+  function pictureField(base, defSticker) {
+    const c = get(base);
+    const pic = c.picture || 'sticker';
+    const out = [h('div', { class: 'f' }, h('span', { class: 'f-l', text: 'Картинка' }),
+      tabs([['sticker', '😊 Стикер'], ['photo', '📷 Своё фото'], ['none', 'Без картинки']], pic, (v) => set(`${base}.picture`, v, true)))];
+    if (pic === 'sticker') out.push(emojiPicker('', c.sticker || defSticker, (e) => set(`${base}.sticker`, e, true)));
+    if (pic === 'photo') out.push(photoField(`${base}.photo`, ''));
+    return out;
+  }
+
   // ---------- шаги ----------
   const PANELS = {
     who() {
@@ -204,21 +214,31 @@
       const list = [...panelHead('Экран после «Да»', 'Короткая пауза после согласия — пошутить или порадоваться вместе.'),
         switchRow('confirm.enabled', 'Показывать этот экран', 'Можно выключить и сразу перейти дальше')];
       if (!c.enabled) return list;
-      const pic = c.picture || 'sticker';
-      list.push(h('div', { class: 'f' }, h('span', { class: 'f-l', text: 'Картинка' }),
-        tabs([['sticker', '😊 Стикер'], ['photo', '📷 Своё фото'], ['none', 'Без картинки']], pic, (v) => set('confirm.picture', v, true))));
-      if (pic === 'sticker') list.push(emojiPicker('', c.sticker, (e) => set('confirm.sticker', e, true)));
-      if (pic === 'photo') list.push(photoField('confirm.photo', ''));
+      list.push(...pictureField('confirm', '🥰'));
       list.push(textInput('confirm.title', 'Заголовок', { max: 120, ph: 'Ура! Я так рад(а)!' }),
         textArea('confirm.text', 'Текст (необязательно)', { max: 400 }),
         textInput('confirm.button', 'Надпись на кнопке', { max: 30, ph: 'Дальше' }));
       return list;
     },
     date() {
-      const list = [...panelHead('Дата и время', 'Получатель сам выберет, когда ему удобно.'),
+      const d = cfg.date;
+      const list = [...panelHead('Дата и время', 'Пусть получатель выберет удобное время — или назначьте сами.'),
         switchRow('date.enabled', 'Спрашивать дату и время')];
-      if (cfg.date.enabled) list.push(textInput('date.title', 'Заголовок', { max: 120 }), textArea('date.text', 'Текст', { max: 300 }),
-        emojiPicker('Стикер', cfg.date.sticker, (e) => set('date.sticker', e, true)));
+      if (!d.enabled) return list;
+      list.push(h('div', { class: 'f' }, h('span', { class: 'f-l', text: 'Кто выбирает' }),
+        tabs([['ask', 'Пусть выберет получатель'], ['fixed', 'Указать свои дату и время']], d.mode || 'ask', (v) => set('date.mode', v, true))));
+      if (d.mode === 'fixed') {
+        const di = h('input', { type: 'date', class: 'inp', value: d.fixedDate || '', 'aria-label': 'Дата встречи' });
+        const ti = h('input', { type: 'time', class: 'inp', value: d.fixedTime || '', 'aria-label': 'Время встречи' });
+        di.addEventListener('change', () => set('date.fixedDate', di.value));
+        ti.addEventListener('change', () => set('date.fixedTime', ti.value));
+        list.push(h('div', { class: 'row' }, field('Дата', di), field('Время (необязательно)', ti)),
+          h('p', { class: 'f-h', text: 'Получатель увидит ваше время и нажмёт «Подходит».' }));
+      }
+      list.push(switchRow('date.chat', 'Кнопка «Решим в чате»', 'Если получатель пока не знает, когда свободен'));
+      list.push(...pictureField('date', '💘'),
+        textInput('date.title', 'Заголовок', { max: 120, ph: d.mode === 'fixed' ? 'Как тебе такое время?' : 'Когда тебе удобно?' }),
+        textArea('date.text', 'Текст (необязательно)', { max: 300 }));
       return list;
     },
     choices() {
@@ -243,7 +263,7 @@
         out.push(h('div', { class: 'f' }, h('span', { class: 'f-l', text: 'Добавить вопрос из готовых' }),
           h('div', { class: 'chips' }, Object.entries(PRESETS).map(([name, p]) => h('button', {
             type: 'button', class: 'chip', text: name,
-            on: { click: () => { cfg.choices.push({ title: p.title, multi: false, items: p.items.slice(0, 4).map(([n, e]) => ({ name: n, emoji: e })) }); activeChoice = cfg.choices.length - 1; changed(true); } },
+            on: { click: () => { cfg.choices.push({ title: p.title, multi: false, items: p.items.slice(0, 6).map(([n, e]) => ({ name: n, emoji: e })) }); activeChoice = cfg.choices.length - 1; changed(true); } },
           })), h('button', { type: 'button', class: 'chip', text: '＋ Свой', on: { click: () => { cfg.choices.push({ title: '', multi: false, items: [{ name: '', emoji: '✨' }, { name: '', emoji: '✨' }] }); activeChoice = cfg.choices.length - 1; changed(true); } } }))));
       }
       return out;
@@ -256,15 +276,33 @@
     },
     done() {
       const err = validateAll();
-      return [...panelHead('Готово!', 'Пройдите приглашение в превью целиком — так его увидит получатель.'),
-        h('div', { class: 'sum-card' },
-          h('div', { text: `Для: ${cfg.toName || '—'}` }),
-          h('div', { text: `Вопрос: ${cfg.ask.title}` }),
-          h('div', { text: `Экранов: ${Player.screensOf(cfg).length}` })),
-        h('p', { class: 'f-h', text: editToken ? 'Изменения сохранятся в той же ссылке.' : `Сделать приглашение и посмотреть — бесплатно. Ссылку для отправки получите на следующем шаге${meta.pay ? ` (${meta.price} ₽)` : ''}.` }),
+      if (editToken) {
+        return [...panelHead('Сохранить изменения', 'Изменения появятся в той же ссылке — отправлять заново не нужно.'),
+          err ? h('div', { class: 'error', text: err }) : null,
+          h('button', { type: 'button', class: 'btn', id: 'create', text: 'Сохранить изменения', on: { click: submit } }),
+          h('div', { class: 'error', id: 'create-err' })];
+      }
+      const gets = [
+        `Ссылку на приглашение — работает ${meta.days || 30} дней`,
+        'Личную страницу с ответом: открыли ли, что выбрали, сколько раз пытались нажать «Нет»',
+        meta.bot ? 'Ответ в Telegram — бот напишет, как только приглашение откроют и ответят' : null,
+        'Возможность поправить приглашение и после отправки',
+      ].filter(Boolean);
+      return [...panelHead('Всё готово! 💌', 'Пройдите приглашение в превью целиком — так его увидит получатель.'),
+        h('div', { class: 'sum-card' }, h('b', { text: 'Что вы получите' }),
+          h('ul', { class: 'gets' }, gets.map((t) => h('li', { text: t })))),
+        meta.bot ? h('div', { class: 'tg-how' },
+          h('b', { text: 'Как получать ответ в Telegram' }),
+          h('ol', {}, h('li', { text: 'Создайте приглашение.' }),
+            h('li', { text: 'На странице приглашения нажмите «Получать ответ в Telegram».' }),
+            h('li', {}, 'Откроется бот ', h('b', { text: '@' + meta.bot }), ' — нажмите «Запустить» (Start).')),
+          h('p', { class: 'f-h', text: 'Готово: бот пришлёт сообщение, когда приглашение откроют и когда ответят — с датой и выбором.' })) : null,
+        h('p', { class: 'f-h', text: meta.pay ? `Дальше — оплата ${meta.price} ₽, сразу после неё вы получите ссылку. Собрать и посмотреть — бесплатно.` : 'Дальше вы получите ссылку для отправки.' }),
         err ? h('div', { class: 'error', text: err }) : null,
-        h('button', { type: 'button', class: 'btn', id: 'create', text: editToken ? 'Сохранить изменения' : 'Создать приглашение 💌', on: { click: submit } }),
-        h('div', { class: 'error', id: 'create-err' })];
+        h('button', { type: 'button', class: 'btn', id: 'create', text: 'Создать приглашение 💌', on: { click: submit } }),
+        h('div', { class: 'error', id: 'create-err' }),
+        h('p', { class: 'f-h' }, 'Пользуясь сервисом, вы соглашаетесь с ', h('a', { href: '/privacy', target: '_blank', text: 'политикой конфиденциальности' }),
+          ' и ', h('a', { href: '/consent', target: '_blank', text: 'обработкой персональных данных' }), '. Условия услуги — в ', h('a', { href: '/oferta', target: '_blank', text: 'публичной оферте' }), '.')];
     },
   };
 
@@ -272,6 +310,7 @@
   function validateAll() {
     if (!cfg.toName.trim()) return 'Напишите, кого приглашаете (шаг «Кого зовём»).';
     if (!cfg.ask.title.trim()) return 'Напишите главный вопрос.';
+    if (cfg.date.enabled && cfg.date.mode === 'fixed' && !cfg.date.fixedDate) return 'Укажите дату встречи (шаг «Дата и время»).';
     for (const [i, q] of cfg.choices.entries()) {
       if (q.items.filter((it) => it.name.trim()).length < 2) return `В вопросе ${i + 1} нужно хотя бы 2 варианта с названием.`;
     }
