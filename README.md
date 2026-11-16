@@ -14,7 +14,7 @@
 
 ## Настройки
 
-Всё настраивается в `data/settings.json` (пример — `settings.example.json`); файл перечитывается сам, перезапуск не нужен. На Windows-сервере удобнее запустить `deploy\settings-windows.ps1` — он спросит всё по очереди:
+Всё настраивается в `data/settings.json` (пример — `settings.example.json`); файл перечитывается сам, перезапуск не нужен. На Windows-сервере удобнее запустить `deploy\settings-windows.ps1` — он откроет файл настроек в Блокноте и после сохранения проверит его:
 
 ```powershell
 $f="$env:TEMP\tolko-settings.ps1"; iwr https://raw.githubusercontent.com/asjarkh-maker/startrad/feature/constructor/deploy/settings-windows.ps1 -OutFile $f -UseBasicParsing; powershell -ExecutionPolicy Bypass -File $f
