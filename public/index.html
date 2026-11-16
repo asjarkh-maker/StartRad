@@ -40,13 +40,6 @@
     .occ a { display: block; text-decoration: none; color: var(--ink); background: #fff; border-radius: var(--radius); padding: 22px; box-shadow: 0 20px 50px -34px rgba(36, 20, 25, .45); border: 2px solid transparent; transition: transform .15s, border-color .15s; }
     .occ a:hover { transform: translateY(-3px); border-color: var(--pink); }
     .occ b { display: inline-block; margin-top: 12px; color: var(--pink); font-size: 14px; }
-    .price { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-    .price .card { padding: 28px; }
-    .price .tag { font-family: 'Unbounded', sans-serif; font-weight: 800; font-size: 34px; letter-spacing: -.03em; margin: 4px 0 14px; }
-    .price ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
-    .price li { padding-left: 28px; position: relative; }
-    .price li::before { content: '✓'; position: absolute; left: 0; color: var(--pink); font-weight: 800; }
-    .price .paid { background: linear-gradient(150deg, #fff 0%, #ffeef3 100%); border: 2px solid #ffc3d3; }
     .faqs { max-width: 760px; }
     .faqs details { background: #fff; border-radius: 16px; padding: 16px 20px; margin-bottom: 10px; }
     .faqs summary { font-weight: 700; cursor: pointer; }
@@ -58,8 +51,7 @@
     .final .st { position: absolute; width: 90px; height: 90px; opacity: .9; }
     @media (max-width: 960px) { .occ { grid-template-columns: repeat(2, 1fr); } .feat { grid-template-columns: repeat(2, 1fr); } }
     @media (max-width: 640px) {
-      .price { grid-template-columns: 1fr; } .final .st { display: none; }
-      .feat, .occ { grid-template-columns: 1fr 1fr; gap: 10px; }
+        .feat, .occ { grid-template-columns: 1fr 1fr; gap: 10px; }
       .feat .card, .occ a { padding: 14px; border-radius: 18px; }
       .feat h3, .occ h3 { font-size: 15px; }
       .feat p, .occ p { font-size: 14px; line-height: 1.4; }
@@ -93,7 +85,7 @@
         <div class="subhead">где ответ — <span class="pill">только «да»</span></div>
         <p class="lead">Соберите милое приглашение за 3 минуты и отправьте ссылку. Кнопка «Нет» убегает, а вы сразу узнаете ответ, дату и место встречи.</p>
         <a class="btn" href="/create">Создать приглашение 💌</a>
-        <p class="fineprint">Готово за 3 минуты · без регистрации · собрать и посмотреть — бесплатно, ссылка — <span id="price">490</span> ₽</p>
+        <p class="fineprint">Готово за 3 минуты · без регистрации</p>
         <p class="fineprint"><a href="/dlya-devushki">Для девушки</a> · <a href="/dlya-parnya">Для парня</a> · <a href="/14-fevralya">14 февраля</a> · <a href="/godovshchina">Годовщина</a></p>
       </div>
 
@@ -170,22 +162,6 @@
       </div>
     </section>
 
-    <section class="sec">
-      <h2>Сколько <span class="accent">стоит</span></h2>
-      <p class="sub">Платите только тогда, когда приглашение готово и нравится.</p>
-      <div class="price">
-        <div class="card">
-          <div class="p-name">Собрать и посмотреть</div>
-          <div class="tag">Бесплатно</div>
-          <ul><li>Конструктор со всеми возможностями</li><li>Живое превью — как увидит получатель</li><li>Без регистрации, черновик сохраняется</li></ul>
-        </div>
-        <div class="card paid">
-          <div class="p-name">Ссылка для отправки</div>
-          <div class="tag"><span class="js-price">490</span>&nbsp;₽</div>
-          <ul><li>Ссылка работает <span class="js-days">30</span> дней</li><li>Ответ, дата и выбор — сразу на вашей странице</li><li>Уведомления в Telegram</li><li>Можно поправить приглашение после отправки</li></ul>
-        </div>
-      </div>
-    </section>
 
     <section class="sec">
       <h2>Вопросы</h2>
@@ -194,7 +170,6 @@
         <details><summary>Что увидит получатель?</summary><p>Письмо в конверте. Открывает — читает ваши слова, отвечает на вопрос, выбирает дату и варианты. Ничего устанавливать не нужно, всё работает в браузере телефона.</p></details>
         <details><summary>Узнает ли он или она, сколько раз нажимал «Нет»?</summary><p>Нет, это видите только вы — на странице с ответом.</p></details>
         <details><summary>Можно ли изменить приглашение после отправки?</summary><p>Да. Изменения сохраняются в той же ссылке, отправлять заново не нужно.</p></details>
-        <details><summary>Как оплатить?</summary><p>Картой или через СБП на защищённой странице ЮKassa. Подробнее — на странице <a href="/payment">«Оплата и возврат»</a>.</p></details>
       </div>
     </section>
 
@@ -244,10 +219,8 @@
       if (box.children.length) document.getElementById('mine').hidden = false;
     })();
     fetch('/api/meta').then(function (r) { return r.json(); }).then(function (m) {
-      document.querySelectorAll('.js-price').forEach(function (e) { e.textContent = m.price; });
       document.querySelectorAll('.js-days').forEach(function (e) { e.textContent = m.days; });
     }).catch(function () {});
-    fetch('/api/config').then(r => r.json()).then(c => { document.getElementById('price').textContent = c.price; }).catch(() => {});
 
     const env = document.getElementById('demoEnvelope');
     const scene = document.getElementById('demoEnvelopeScene');
