@@ -19,6 +19,7 @@ function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
   return { salt, hash };
 }
 function check(password) {
+  if (typeof password === 'string') password = password.trim(); // пробелы и переносы при копировании не считаются
   const h = storedHash();
   if (!h || typeof password !== 'string' || !password || password.length > 200) return false;
   const got = Buffer.from(hashPassword(password, h.salt).hash, 'hex');
@@ -151,8 +152,9 @@ function routes(app, { status, onSaved = () => {} }) {
   app.post('/api/admin/password', guard, (req, res) => {
     const { current, next } = req.body || {};
     if (!check(current)) return res.status(400).json({ error: 'Текущий пароль неверный' });
-    if (typeof next !== 'string' || next.length < 10 || next.length > 200) return res.status(400).json({ error: 'Новый пароль — не короче 10 символов' });
-    settings.save({ admin: hashPassword(next) });
+    const np = typeof next === 'string' ? next.trim() : '';
+    if (np.length < 10 || np.length > 200) return res.status(400).json({ error: 'Новый пароль — не короче 10 символов' });
+    settings.save({ admin: hashPassword(np) });
     // все прочие входы закрываем
     const keep = cookieOf(req); for (const id of sessions.keys()) if (id !== keep) sessions.delete(id);
     res.json({ ok: true });
