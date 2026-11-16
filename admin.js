@@ -103,7 +103,7 @@ function patchFrom(b) {
   return p;
 }
 
-function routes(app, { status, onSaved = () => {} }) {
+function routes(app, { status, stats = () => ({}), onSaved = () => {} }) {
   const sendFile = (res) => {
     res.setHeader('X-Robots-Tag', 'noindex');
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
@@ -140,6 +140,11 @@ function routes(app, { status, onSaved = () => {} }) {
     if (req.method !== 'GET' && !sameOrigin(req)) return res.status(403).json({ error: 'Запрос с чужого сайта' });
     next();
   };
+
+  app.get('/api/admin/stats', guard, (req, res) => {
+    const d = Number(req.query.days);
+    res.json(stats([7, 30, 90].includes(d) ? d : 0));
+  });
 
   app.get('/api/admin/settings', guard, (req, res) => res.json({ settings: view(), status: status() }));
 

@@ -250,6 +250,7 @@ app.post('/api/inv', rate('create', 20, 3600e3), (req, res) => {
   // создано в мини-приложении Telegram: подтверждаем пользователя и сразу подключаем уведомления
   const tgUser = telegram.verifyInitData((req.body || {}).tg);
   if (tgUser) inv.tgChats = [tgUser.id];
+  inv.source = tgUser ? 'tg' : 'web';
   db[inv.slug] = inv; byToken.set(inv.token, inv); byTgCode.set(inv.tgCode, inv); save();
   if (tgUser) {
     const base = S().site.url || `${req.protocol}://${req.get('host')}`;
@@ -401,9 +402,59 @@ app.post('/api/i/:slug/event', rate('event', 300, 3600e3), (req, res) => {
 });
 
 // ---- страницы ----
+// ---- статистика для админки ----
+const STATS_TZ = 'Asia/Yekaterinburg'; // Уфа, UTC+5
+const dayFmt = new Intl.DateTimeFormat('en-CA', { timeZone: STATS_TZ, year: 'numeric', month: '2-digit', day: '2-digit' });
+const dayKey = (t) => dayFmt.format(new Date(t));
+function computeStats(days) {
+  const now = Date.now();
+  const all = Object.values(db);
+  const first = all.reduce((m, i) => Math.min(m, Date.parse(i.createdAt) || now), now);
+  const from = days ? now - days * DAY : first;
+  const inRange = (iso) => Boolean(iso) && Date.parse(iso) >= from;
+  const realPaid = (i) => Boolean(i.payment && i.payment.status === 'succeeded');
+  const created = all.filter((i) => inRange(i.createdAt));
+  const paid = all.filter((i) => realPaid(i) && inRange(i.paidAt));
+  const testPaid = all.filter((i) => i.paid && !realPaid(i) && inRange(i.paidAt));
+  const revenue = paid.reduce((sum, i) => sum + (Number(i.payment.amount) || 0), 0);
+  // судьба оплаченных приглашений (созданных в периоде)
+  const live = created.filter((i) => i.paid);
+  const yes = live.filter((i) => i.answer && i.answer.finishedAt);
+  const declined = live.filter((i) => i.answer && i.answer.declinedAt);
+  const opened = live.filter((i) => i.stats.opens > 0);
+  const noClicks = yes.map((i) => i.stats.noClicks || 0);
+  // по дням
+  const byDay = [];
+  const span = Math.min(366, Math.max(1, Math.ceil((now - from) / DAY)));
+  const idx = new Map();
+  for (let k = span - 1; k >= 0; k--) { const key = dayKey(now - k * DAY); if (!idx.has(key)) { idx.set(key, byDay.length); byDay.push({ date: key, created: 0, paid: 0 }); } }
+  for (const i of created) { const j = idx.get(dayKey(i.createdAt)); if (j !== undefined) byDay[j].created++; }
+  for (const i of paid) { const j = idx.get(dayKey(i.paidAt)); if (j !== undefined) byDay[j].paid++; }
+  // популярное
+  const count = (arr) => { const m = new Map(); for (const x of arr) m.set(x, (m.get(x) || 0) + 1); return [...m].sort((a, b) => b[1] - a[1]); };
+  const picks = count(yes.flatMap((i) => (i.answer.choices || []).filter(Boolean).flatMap((c) => c.picks))).slice(0, 8);
+  const NO = { run: 'Убегает', shrink: 'Уменьшается', kiss: 'Уговаривает', turn: 'Становится «Да»', honest: 'Честный ответ' };
+  const noModes = count(created.map((i) => NO[(i.config.ask || {}).noMode] || NO.run));
+  const sources = { web: created.filter((i) => i.source !== 'tg').length, tg: created.filter((i) => i.source === 'tg').length };
+  const dates = { chosen: yes.filter((i) => i.answer.date && i.answer.date.date).length, chat: yes.filter((i) => i.answer.date && i.answer.date.chat).length };
+  const recent = all.filter(realPaid).sort((a, b) => Date.parse(b.paidAt) - Date.parse(a.paidAt)).slice(0, 15).map((i) => ({
+    at: i.paidAt, amount: Number(i.payment.amount) || 0,
+    state: i.answer && i.answer.finishedAt ? 'yes' : i.answer && i.answer.declinedAt ? 'no' : i.stats.opens ? 'opened' : 'sent',
+    expired: expired(i), source: i.source === 'tg' ? 'tg' : 'web',
+  }));
+  return {
+    days, tz: 'Уфа (UTC+5)',
+    totals: { created: created.length, paid: paid.length, testPaid: testPaid.length, revenue, conversion: created.length ? paid.length / created.length : 0,
+      opened: opened.length, yes: yes.length, declined: declined.length, live: live.length,
+      avgNo: noClicks.length ? noClicks.reduce((a, b) => a + b, 0) / noClicks.length : 0 },
+    byDay, picks, noModes, sources, dates, recent,
+  };
+}
+
 // ---- админка ----
 admin.routes(app, {
   status: () => ({ bot: telegram.username() || null, payment: paymentMode(), version: version() || null }),
+  stats: (days) => computeStats(days),
   onSaved: (patch) => { if (patch.telegram) telegram.kick(); else if (patch.site && patch.site.url !== undefined) telegram.setupMenu(); },
 });
 
