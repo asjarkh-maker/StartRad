@@ -207,3 +207,56 @@ textarea.inp { resize: vertical; min-height: 84px; }
 .tg-how { background: #eaf4ff; border-radius: 16px; padding: 14px 18px; margin-bottom: 14px; }
 .tg-how ol { margin: 8px 0 6px; padding-left: 20px; display: grid; gap: 4px; }
 .ed-panel a { color: var(--pink); }
+
+/* наглядный выбор: темы и способ открытия мини-карточками */
+.theme-cards { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.theme-cards.two { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 18px; }
+.tcard { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 6px 8px; border: 2px solid var(--line); border-radius: 16px; background: #fff; cursor: pointer; font: 700 13px 'Manrope', sans-serif; color: var(--ink); }
+.tcard.on { border-color: var(--pink); box-shadow: 0 8px 20px -12px rgba(255, 61, 110, .7); }
+.tcard small { font-weight: 500; color: var(--muted); font-size: 12px; text-align: center; }
+.tmini { width: 100%; height: auto; aspect-ratio: 3 / 4; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 8px 6px; position: relative; overflow: hidden; }
+.theme-cards.two .tmini { aspect-ratio: 16 / 9; }
+.tmini-h { color: var(--a1); font-size: 16px; line-height: 1; }
+.tmini-t { width: 70%; height: 6px; border-radius: 3px; background: var(--ink); opacity: .75; }
+.tmini-b { display: flex; gap: 4px; }
+.tmini-yes, .tmini-no { border-radius: 999px; font: 700 10px 'Manrope', sans-serif; padding: 4px 8px; white-space: nowrap; }
+.tmini-yes { color: #fff; background: linear-gradient(100deg, var(--a1), var(--a2)); }
+.tmini-no { color: var(--muted); background: var(--soft); }
+.tcard-n { line-height: 1.2; text-align: center; }
+.gmini-env { width: 56%; aspect-ratio: 3 / 2; border-radius: 6px; background: linear-gradient(160deg, var(--a2), var(--a1)); position: relative; display: grid; place-items: center; }
+.gmini-env::before { content: ''; position: absolute; inset: 0; clip-path: polygon(0 0, 100% 0, 50% 60%); background: var(--a1); filter: brightness(1.08); border-radius: 6px 6px 0 0; }
+.gmini-seal { position: relative; z-index: 1; width: 16px; height: 16px; border-radius: 50%; background: rgba(0, 0, 0, .28); color: #fff; font-size: 9px; display: grid; place-items: center; }
+.gmini-e { font-size: 22px; line-height: 1; }
+/* мини-превью под настройками — только на телефоне */
+.inline-pv { display: none; }
+@media (max-width: 900px) {
+  .inline-pv { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 22px; padding-top: 18px; border-top: 1px dashed var(--line); }
+  .inline-pv-h { font-weight: 700; font-size: 13px; color: var(--muted); }
+  .pv-phone.mini { width: 220px; height: 426px; border-radius: 34px; padding: 8px; }
+  .pv-phone.mini .pv-notch { top: 14px; width: 62px; height: 17px; }
+  .pv-phone.mini .pv-screen { border-radius: 27px; }
+  .pv-phone.mini .pv-screen .pl-stage { padding: 34px 12px 14px; }
+  .pv-phone.mini .pl-title { font-size: 16px; }
+  .pv-phone.mini .pl-text, .pv-phone.mini .pl-hint { font-size: 12px; }
+  .pv-phone.mini .pl-btn { padding: 11px 16px; font-size: 13px; }
+  .pv-phone.mini .pl-sticker.anim { width: 64px; height: 64px; }
+  .pv-phone.mini .pl-sticker.anim.big { width: 72px; height: 72px; }
+  .pv-phone.mini .pl-env { width: 140px; height: 92px; }
+  .pv-phone.mini .pl-photo { width: 104px; height: 104px; }
+  .pv-phone.mini .pl-card { padding: 8px 4px; font-size: 12px; }
+  .pv-phone.mini .pl-card-e { font-size: 22px; }
+  .theme-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* самые узкие телефоны (320px) */
+.tcard { min-width: 0; }
+.tmini-b { max-width: 100%; }
+@media (max-width: 380px) {
+  .tmini-yes, .tmini-no { padding: 3px 6px; font-size: 9px; }
+  .tmini-b { gap: 3px; }
+  .tcard { padding: 5px 4px 7px; font-size: 12px; }
+  #reset { padding: 8px 10px; font-size: 12px; }
+  .dots { gap: 4px; }
+  .dot { width: 8px; height: 8px; }
+  .ed-top { gap: 8px; padding: 10px 12px; }
+}

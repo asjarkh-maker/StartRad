@@ -54,6 +54,7 @@
 
   let cfg = defaults(), stepIdx = 0, player = null, activeChoice = 0, submitting = false, meta = { price: 490, pay: true };
   let previewTimer = 0;
+  let inlinePlayer = null;
 
   // ---------- состояние ----------
   function get(path) { return path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), cfg); }
@@ -185,15 +186,22 @@
         textInput('toName', 'Кого приглашаете', { max: 40, ph: 'Аня' }),
         textInput('fromName', 'Ваше имя (необязательно)', { max: 40, ph: 'Саша' }),
         h('div', { class: 'f' }, h('span', { class: 'f-l', text: 'Оформление' }),
-          h('div', { class: 'themes' }, THEMES.map(([id, name, color]) => h('button', {
-            type: 'button', class: 'theme' + (cfg.theme === id ? ' on' : ''), on: { click: () => set('theme', id, true) },
-          }, h('i', { style: `background:${color}` }), name)))),
+          h('div', { class: 'theme-cards' }, THEMES.map(([id, name]) => h('button', {
+            type: 'button', class: 'tcard' + (cfg.theme === id ? ' on' : ''), 'aria-pressed': String(cfg.theme === id), on: { click: () => set('theme', id, true) },
+          }, h('span', { class: 'pl tmini', 'data-theme': id, 'aria-hidden': 'true' },
+            h('span', { class: 'tmini-h', text: '♥' }), h('span', { class: 'tmini-t' }),
+            h('span', { class: 'tmini-b' }, h('span', { class: 'tmini-yes', text: 'Да' }), h('span', { class: 'tmini-no', text: 'Нет' }))),
+          h('span', { class: 'tcard-n', text: name }))))),
         emojiPicker('Стикер на приглашении', cfg.ask.sticker, (e) => set('ask.sticker', e, true))];
     },
     gate() {
       return [...panelHead('Как откроется приглашение', 'Первое, что увидит получатель.'),
-        tabs([['envelope', '💌 Конверт'], ['button', '🔘 Кнопка']], cfg.gate.type, (v) => set('gate.type', v, true)),
-        textInput('gate.text', 'Подпись (необязательно)', { max: 80, ph: 'Тебе письмо. Нажми на конверт 💌' })];
+        h('div', { class: 'theme-cards two' }, [['envelope', 'Конверт', 'нужно нажать, чтобы открыть'], ['button', 'Кнопка «Открыть»', 'проще и быстрее']].map(([id, name, sub]) => h('button', {
+          type: 'button', class: 'tcard' + (cfg.gate.type === id ? ' on' : ''), 'aria-pressed': String(cfg.gate.type === id), on: { click: () => set('gate.type', id, true) },
+        }, h('span', { class: 'pl tmini gmini', 'data-theme': cfg.theme, 'aria-hidden': 'true' },
+          id === 'envelope' ? h('span', { class: 'gmini-env' }, h('span', { class: 'gmini-seal', text: '♥' })) : [h('span', { class: 'gmini-e', text: '💌' }), h('span', { class: 'tmini-yes', text: 'Открыть' })]),
+        h('span', { class: 'tcard-n', text: name }), h('small', { text: sub })))),
+        textInput('gate.text', 'Подпись (необязательно)', { max: 80, ph: cfg.gate.type === 'button' ? 'Тебе письмо 💌' : 'Тебе письмо. Нажми на конверт 💌' })];
     },
     ask() {
       return [...panelHead('Главный вопрос', 'Сам вопрос и тёплые слова. Ниже выберите, как поведут себя кнопки «Да» и «Нет».'),
@@ -365,11 +373,16 @@
     const iso = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
     const target = startAt || (STEPS[stepIdx].id === 'choices' && cfg.choices.length ? 'choice' + Math.min(activeChoice, c.choices.length - 1) : previewScreen());
     if (player) player.destroy();
+    if (inlinePlayer) { inlinePlayer.destroy(); inlinePlayer = null; }
     const shown = Player.screensOf(c);
-    player = Player.mount($('#phone'), c, {
+    const opts = {
       mode: 'preview', startAt: shown.includes(target) ? target : 'ask',
       demo: { date: c.date.enabled ? { date: iso, time: '19:00' } : null, picks: c.choices.map((q) => [q.items[0].name]) },
-    });
+    };
+    player = Player.mount($('#phone'), c, opts);
+    // на телефоне большого превью не видно — показываем мини-превью прямо под настройками
+    const inline = $('#phoneInline');
+    if (inline && window.matchMedia('(max-width: 900px)').matches) inlinePlayer = Player.mount(inline, c, opts);
   }
 
   // ---------- каркас ----------
@@ -390,7 +403,12 @@
     // поле «noLinesText» — служебное, хранится в самом конфиге до отправки
     if (cfg.ask.noLinesText == null) cfg.ask.noLinesText = (cfg.ask.noLines || []).join('\n');
     panel.append(...PANELS[STEPS[stepIdx].id]().filter(Boolean));
+    panel.append(h('div', { class: 'inline-pv' }, h('div', { class: 'inline-pv-h', text: 'Так увидит получатель' }),
+      h('div', { class: 'pv-phone mini' }, h('div', { class: 'pv-notch' }), h('div', { class: 'pv-screen', id: 'phoneInline' }))));
     panel.scrollTop = keep;
+    // панель перерисована — мини-превью наполняем заново (вместе с большим, одним вызовом)
+    clearTimeout(previewTimer);
+    previewTimer = setTimeout(() => refreshPreview(), 0);
   }
   function goStep(i) {
     stepIdx = Math.max(0, Math.min(STEPS.length - 1, i));

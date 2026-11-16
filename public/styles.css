@@ -224,3 +224,13 @@ mark.todo { background: #ffe1e6; color: #b0244a; border-radius: 6px; padding: 1p
 }
 
 .ver { opacity: .6; white-space: nowrap; }
+
+/* длинные слова в крупных заголовках не выходят за край на узких экранах */
+h1, h2, .pl-title { overflow-wrap: break-word; hyphens: auto; -webkit-hyphens: auto; }
+@media (max-width: 380px) {
+  .hero h1 { font-size: 30px; }
+  .subhead { font-size: 18px; }
+  .doc h1 { font-size: 24px; }
+  .doc h2 { font-size: 19px; }
+  .page h1, .own h1 { font-size: 24px; }
+}
