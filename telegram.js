@@ -68,6 +68,23 @@ function verifyInitData(initData, maxAgeSec = 86400) {
   } catch { return null; }
 }
 
+// отправка файла (резервная копия)
+async function sendDocument(chatId, filename, buffer, caption) {
+  if (!me) throw new Error('бот не подключён');
+  const form = new FormData();
+  form.append('chat_id', String(chatId));
+  if (caption) { form.append('caption', caption); form.append('parse_mode', 'HTML'); }
+  form.append('document', new Blob([buffer], { type: 'application/zip' }), filename);
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 120000);
+  try {
+    const r = await fetch(`${API}/bot${activeToken}/sendDocument`, { method: 'POST', body: form, signal: ctrl.signal });
+    const d = await r.json().catch(() => ({}));
+    if (!d.ok) { const e = new Error(d.description || `Telegram ${r.status}`); e.code = d.error_code || r.status; throw e; }
+    return d.result;
+  } finally { clearTimeout(t); }
+}
+
 // сообщение конкретному чату (например, после создания приглашения в мини-приложении)
 async function sendTo(chatId, html, extra = {}) {
   if (!me) return false;
@@ -82,6 +99,13 @@ async function handle(update) {
   const match = m.text.match(/^\/start(?:@\w+)?(?:\s+([A-Za-z0-9_-]{8,64}))?/);
   if (!match) {
     await call('sendMessage', { chat_id: chatId, text: 'Я помогаю с приглашениями «Только да»: создайте приглашение кнопкой ниже — и я пришлю сюда, когда его откроют и ответят.', ...createButton() });
+    return;
+  }
+  if (match[1] && match[1].startsWith('bk_')) {
+    const okCode = hooks.onBackupCode ? hooks.onBackupCode(match[1].slice(3), chatId) : false;
+    await call('sendMessage', { chat_id: chatId, text: okCode
+      ? 'Готово! 🗂 Каждый день в 4:00 по Уфе буду присылать сюда резервную копию сайта: приглашения, ответы и фото. Храните этот чат — по архиву сайт восстанавливается за минуты.'
+      : 'Код подключения устарел. Откройте админку и нажмите «Подключить» ещё раз.' });
     return;
   }
   const inv = match[1] ? hooks.findByCode(match[1]) : null;
@@ -147,4 +171,4 @@ function start(h) {
   if (!running) loop().catch((e) => console.error('Telegram: остановлен —', e));
 }
 
-module.exports = { start, notify, esc, kick, verifyInitData, sendTo, setupMenu: () => setupMenu(activeToken), username: () => (me ? me.username : '') };
+module.exports = { start, notify, esc, kick, verifyInitData, sendTo, sendDocument, setupMenu: () => setupMenu(activeToken), username: () => (me ? me.username : '') };

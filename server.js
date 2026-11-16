@@ -8,6 +8,7 @@ const pages = require('./pages');
 const telegram = require('./telegram');
 const yookassa = require('./yookassa');
 const admin = require('./admin');
+const backup = require('./backup');
 
 const PORT = process.env.PORT || 3000;
 const S = () => settings.load();
@@ -451,10 +452,56 @@ function computeStats(days) {
   };
 }
 
+// ---- резервные копии в Telegram ----
+const backupCodes = new Map(); // одноразовый код подключения → срок
+function backupLink() {
+  const bot = telegram.username();
+  if (!bot) return null;
+  const code = crypto.randomBytes(9).toString('base64url');
+  backupCodes.set(code, Date.now() + 15 * 60e3);
+  return `https://t.me/${bot}?start=bk_${code}`;
+}
+function onBackupCode(code, chatId) {
+  const exp = backupCodes.get(code);
+  if (!exp || exp < Date.now()) return false;
+  backupCodes.delete(code);
+  settings.save({ backup: { chatId, lastError: '' } });
+  return true;
+}
+let backupBusy = false;
+async function sendBackup(reason) {
+  const b = S().backup;
+  if (!b.chatId) throw new Error('Чат для копий не подключён');
+  if (backupBusy) throw new Error('Копия уже отправляется');
+  backupBusy = true;
+  try {
+    const { zip, invites, photos, skipped } = backup.build({ db, uploadDir: UPLOAD_DIR });
+    const day = new Intl.DateTimeFormat('ru-RU', { timeZone: STATS_TZ, day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date());
+    const host = (S().site.url || 'onlyda').replace(/^https?:\/\//, '');
+    const caption = `🗂 Резервная копия <b>${telegram.esc(host)}</b> за ${day}\nПриглашений: ${invites}, фото: ${photos}${skipped ? ` (ещё ${skipped} не поместились)` : ''}${reason === 'manual' ? '\nОтправлена вручную из админки' : ''}`;
+    await telegram.sendDocument(b.chatId, `onlyda-backup-${dayKey(Date.now())}.zip`, zip, caption);
+    settings.save({ backup: { lastAt: new Date().toISOString(), lastSize: zip.length, lastError: '' } });
+    return { size: zip.length, invites, photos };
+  } catch (e) {
+    settings.save({ backup: { lastError: e.message } });
+    throw e;
+  } finally { backupBusy = false; }
+}
+// раз в 10 минут проверяем: если в Уфе 4 часа и сегодня копии ещё не было — отправляем
+const hourFmt = new Intl.DateTimeFormat('en-GB', { timeZone: STATS_TZ, hour: '2-digit', hour12: false });
+setInterval(() => {
+  const b = S().backup;
+  if (!b.chatId || !telegram.username()) return;
+  if (Number(hourFmt.format(new Date())) !== Number(process.env.BACKUP_HOUR || 4)) return;
+  if (b.lastAt && dayKey(b.lastAt) === dayKey(Date.now())) return;
+  sendBackup('daily').catch((e) => console.error('Резервная копия:', e.message));
+}, Number(process.env.BACKUP_CHECK_MS) || 10 * 60e3).unref();
+
 // ---- админка ----
 admin.routes(app, {
   status: () => ({ bot: telegram.username() || null, payment: paymentMode(), version: version() || null }),
   stats: (days) => computeStats(days),
+  backup: { link: backupLink, send: () => sendBackup('manual'), off: () => settings.save({ backup: { chatId: 0 } }) },
   onSaved: (patch) => { if (patch.telegram) telegram.kick(); else if (patch.site && patch.site.url !== undefined) telegram.setupMenu(); },
 });
 
@@ -471,5 +518,5 @@ app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
   res.status(500).json({ error: 'Ошибка сервера' });
 });
 
-telegram.start({ findByCode: (code) => byTgCode.get(code) || null, save });
+telegram.start({ findByCode: (code) => byTgCode.get(code) || null, save, onBackupCode });
 app.listen(PORT, () => console.log(`«Только да» запущен: http://localhost:${PORT} (оплата: ${paymentMode()})`));

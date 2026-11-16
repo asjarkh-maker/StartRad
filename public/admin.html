@@ -184,7 +184,40 @@
       });
     } } }), pmsg, perr);
 
-    app.append(h('h1', { text: 'Админка' }), tabsBar(), tg, yk, site, seller, h('div', { class: 'bar' }, save, ok, err), pw,
+    // резервные копии
+    var b = s.backup || {};
+    var bmsg = h('div', { class: 'ok-msg' }), berr = h('div', { class: 'error', text: b.lastError ? 'Последняя попытка: ' + b.lastError : '' });
+    var when = b.lastAt ? new Date(b.lastAt).toLocaleString('ru-RU', { timeZone: 'Asia/Yekaterinburg', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : '';
+    var kb = b.lastSize ? ' · ' + (b.lastSize / 1024 / 1024).toLocaleString('ru-RU', { maximumFractionDigits: 1 }) + ' МБ' : '';
+    var bk = h('div', { class: 'card' }, h('h2', { text: 'Резервные копии' }),
+      status(Boolean(b.connected), b.connected ? 'Каждый день в 4:00 по Уфе — в ваш Telegram' : (st.bot ? 'Не подключены' : 'Сначала подключите Telegram-бота')),
+      h('p', { class: 'f-h', text: b.connected ? (when ? 'Последняя копия: ' + when + kb : 'Копий ещё не было — отправьте первую кнопкой ниже.') : 'Бот будет присылать архив с приглашениями, ответами и фото. Ключей и паролей в архиве нет.' }));
+    var actions = h('div', { class: 'own-actions' });
+    if (b.connected) {
+      actions.append(
+        h('button', { type: 'button', class: 'btn btn-sm', text: 'Отправить копию сейчас', on: { click: function (e) {
+          var btn = e.currentTarget; btn.disabled = true; btn.textContent = 'Отправляю…'; bmsg.textContent = ''; berr.textContent = '';
+          api('POST', '/api/admin/backup/now').then(function (r) {
+            btn.disabled = false; btn.textContent = 'Отправить копию сейчас';
+            if (r.ok) { load(); } else berr.textContent = r.error || 'Ошибка';
+          });
+        } } }),
+        h('button', { type: 'button', class: 'btn btn-ghost btn-sm', text: 'Отключить', on: { click: function () {
+          if (!confirm('Отключить ежедневные резервные копии?')) return;
+          api('POST', '/api/admin/backup/off').then(function () { load(); });
+        } } }));
+    } else if (st.bot) {
+      actions.append(h('button', { type: 'button', class: 'btn btn-sm', text: 'Подключить', on: { click: function () {
+        api('POST', '/api/admin/backup/link').then(function (r) {
+          if (!r.link) { berr.textContent = r.error || 'Ошибка'; return; }
+          bmsg.textContent = 'Откроется бот — нажмите «Запустить». Потом вернитесь сюда и обновите страницу.';
+          window.open(r.link, '_blank', 'noopener');
+        });
+      } } }));
+    }
+    bk.append(actions, bmsg, berr);
+
+    app.append(h('h1', { text: 'Админка' }), tabsBar(), tg, yk, site, seller, bk, h('div', { class: 'bar' }, save, ok, err), pw,
       h('p', { class: 'f-h', text: 'Версия сайта: ' + (st.version || 'неизвестна') }));
   }
 

@@ -51,6 +51,7 @@ function view() {
     telegram: { tokenSet: Boolean(s.telegram.token) },
     yookassa: { shopId: s.yookassa.shopId, secretKeySet: Boolean(s.yookassa.secretKey), receipt: Boolean(s.yookassa.receipt) },
     passwordChanged: Boolean(s.admin && s.admin.hash),
+    backup: { connected: Boolean(s.backup && s.backup.chatId), lastAt: (s.backup && s.backup.lastAt) || '', lastSize: (s.backup && s.backup.lastSize) || 0, lastError: (s.backup && s.backup.lastError) || '' },
   };
 }
 
@@ -103,7 +104,7 @@ function patchFrom(b) {
   return p;
 }
 
-function routes(app, { status, stats = () => ({}), onSaved = () => {} }) {
+function routes(app, { status, stats = () => ({}), backup = null, onSaved = () => {} }) {
   const sendFile = (res) => {
     res.setHeader('X-Robots-Tag', 'noindex');
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
@@ -145,6 +146,19 @@ function routes(app, { status, stats = () => ({}), onSaved = () => {} }) {
     const d = Number(req.query.days);
     res.json(stats([7, 30, 90].includes(d) ? d : 0));
   });
+
+  if (backup) {
+    app.post('/api/admin/backup/link', guard, (req, res) => {
+      const link = backup.link();
+      if (!link) return res.status(400).json({ error: 'Сначала подключите Telegram-бота (токен выше)' });
+      res.json({ link });
+    });
+    app.post('/api/admin/backup/now', guard, async (req, res) => {
+      try { const r = await backup.send(); res.json({ ok: true, ...r, settings: view() }); }
+      catch (e) { res.status(400).json({ error: e.message, settings: view() }); }
+    });
+    app.post('/api/admin/backup/off', guard, (req, res) => { backup.off(); res.json({ ok: true, settings: view() }); });
+  }
 
   app.get('/api/admin/settings', guard, (req, res) => res.json({ settings: view(), status: status() }));
 

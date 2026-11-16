@@ -25,6 +25,7 @@ const DEFAULTS = {
   price: 490,
   linkDays: 30,
   telegram: { token: '' },
+  backup: { chatId: 0, lastAt: '', lastSize: 0, lastError: '' },
   yookassa: {
     shopId: '',
     secretKey: '',
