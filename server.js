@@ -7,6 +7,7 @@ const settings = require('./settings');
 const pages = require('./pages');
 const telegram = require('./telegram');
 const yookassa = require('./yookassa');
+const admin = require('./admin');
 
 const PORT = process.env.PORT || 3000;
 const S = () => settings.load();
@@ -382,6 +383,12 @@ app.post('/api/i/:slug/event', rate('event', 300, 3600e3), (req, res) => {
 });
 
 // ---- страницы ----
+// ---- админка ----
+admin.routes(app, {
+  status: () => ({ bot: telegram.username() || null, payment: paymentMode(), version: version() || null }),
+  onSaved: (patch) => { if (patch.telegram) telegram.kick(); },
+});
+
 const page = (name) => (req, res) => sendHtml(res, name, 200, true);
 // личное приглашение: без Метрики и без плашки cookie поверх экрана
 app.get('/i/:slug', (req, res) => sendHtml(res, 'invite.html', 200, true, false));

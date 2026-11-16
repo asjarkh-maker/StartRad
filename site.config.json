@@ -1,0 +1,18 @@
+{
+  "site": {
+    "url": "https://onlyda.ru",
+    "email": "",
+    "phone": "",
+    "telegram": "",
+    "metrikaId": ""
+  },
+  "seller": {
+    "status": "",
+    "name": "",
+    "inn": "",
+    "ogrnip": "",
+    "address": ""
+  },
+  "price": 490,
+  "linkDays": 30
+}

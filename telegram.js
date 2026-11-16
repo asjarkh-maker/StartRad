@@ -25,7 +25,10 @@ async function call(method, body, tk = activeToken, timeoutMs = 15000) {
   } finally { clearTimeout(t); }
 }
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// ожидание, которое можно прервать: после сохранения настроек бот переподключается сразу
+let wake = null;
+const sleep = (ms) => new Promise((r) => { const t = setTimeout(() => { wake = null; r(); }, ms); wake = () => { clearTimeout(t); wake = null; r(); }; });
+function kick() { if (wake) wake(); }
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
 async function handle(update) {
@@ -99,4 +102,4 @@ function start(h) {
   if (!running) loop().catch((e) => console.error('Telegram: остановлен —', e));
 }
 
-module.exports = { start, notify, esc, username: () => (me ? me.username : '') };
+module.exports = { start, notify, esc, kick, username: () => (me ? me.username : '') };

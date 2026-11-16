@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Админка — Только да</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/app.css">
+<style>
+  .adm { max-width: 720px; margin: 0 auto; padding: 10px 24px 80px; }
+  .adm h1 { font-family: 'Unbounded', sans-serif; font-weight: 800; font-size: 32px; letter-spacing: -.03em; margin: 10px 0 18px; }
+  .adm .card { margin-bottom: 16px; }
+  .adm h2 { font-family: 'Unbounded', sans-serif; font-size: 18px; margin: 0 0 16px; }
+  .st-line { display: flex; gap: 8px; align-items: center; font-weight: 700; margin: -6px 0 16px; }
+  .dot-ok, .dot-no { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .dot-ok { background: #14b87a; } .dot-no { background: #e7a400; }
+  .ok-msg { color: #12663f; font-weight: 700; min-height: 1.4em; margin-top: 10px; }
+  .bar { position: sticky; bottom: 0; background: var(--bg); padding: 14px 0; display: flex; gap: 12px; align-items: center; }
+  select.inp { appearance: auto; }
+  .chk { display: flex; gap: 10px; align-items: center; font-weight: 600; }
+  .chk input { width: 20px; height: 20px; }
+  code { background: #fff1f5; padding: 2px 6px; border-radius: 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="header">
+    <a class="logo" href="/"><span class="logo-mark"><svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.2C.8 8.3 2.9 4.5 6.6 4.5c2.1 0 3.6 1.2 4.4 2.5.8-1.3 2.3-2.5 4.4-2.5 3.7 0 5.8 3.8 4.2 7.3C19.5 16.4 12 21 12 21z"/></svg></span><span>только <span class="accent">да</span></span></a>
+    <button class="btn btn-ghost" id="logout" type="button" hidden>Выйти</button>
+  </header>
+</div>
+<main class="adm" id="app"><p>Загрузка…</p></main>
+<script>
+(function () {
+  'use strict';
+  var app = document.getElementById('app');
+  function h(tag, attrs) {
+    var el = document.createElement(tag), kids = [].slice.call(arguments, 2);
+    Object.keys(attrs || {}).forEach(function (k) {
+      var v = attrs[k];
+      if (v == null || v === false) return;
+      if (k === 'text') el.textContent = v; else if (k === 'class') el.className = v;
+      else if (k === 'on') Object.keys(v).forEach(function (e) { el.addEventListener(e, v[e]); });
+      else el.setAttribute(k, v === true ? '' : v);
+    });
+    (function add(list) { list.forEach(function (c) {
+      if (Array.isArray(c)) return add(c);
+      if (c != null && c !== false) el.append(c.nodeType ? c : document.createTextNode(String(c)));
+    }); })(kids);
+    return el;
+  }
+  function api(method, url, body) {
+    return fetch(url, { method: method, headers: body ? { 'content-type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined, credentials: 'same-origin' })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { d._status = r.status; return d; }); });
+  }
+  function field(label, input, hint) { return h('label', { class: 'f' }, h('span', { class: 'f-l', text: label }), input, hint ? h('span', { class: 'f-h', text: hint }) : null); }
+  function inp(id, value, attrs) { var a = Object.assign({ class: 'inp', id: id, value: value || '' }, attrs || {}); return h('input', a); }
+  var val = function (id) { return document.getElementById(id).value.trim(); };
+
+  function login(err) {
+    document.getElementById('logout').hidden = true;
+    app.innerHTML = '';
+    var pass = h('input', { class: 'inp', type: 'password', id: 'pass', autocomplete: 'current-password', placeholder: 'Пароль' });
+    var msg = h('div', { class: 'error', text: err || '' });
+    var form = h('form', { class: 'card' }, h('h2', { text: 'Вход в админку' }), field('Пароль', pass), h('button', { class: 'btn', type: 'submit', text: 'Войти' }), msg);
+    form.addEventListener('submit', function (e) {
+      e.preventDefault(); msg.textContent = '';
+      api('POST', '/api/admin/login', { password: pass.value }).then(function (d) { if (d.ok) load(); else msg.textContent = d.error || 'Ошибка'; });
+    });
+    app.append(h('h1', { text: 'Админка' }), form);
+    pass.focus();
+  }
+
+  function render(d) {
+    var s = d.settings, st = d.status;
+    document.getElementById('logout').hidden = false;
+    app.innerHTML = '';
+    var ok = h('div', { class: 'ok-msg' }), err = h('div', { class: 'error' });
+    var status = function (good, text) { return h('div', { class: 'st-line' }, h('span', { class: good ? 'dot-ok' : 'dot-no' }), text); };
+
+    var tg = h('div', { class: 'card' }, h('h2', { text: 'Telegram-бот' }),
+      status(Boolean(st.bot), st.bot ? 'Подключён: @' + st.bot : (s.telegram.tokenSet ? 'Токен задан, но бот не подключился — проверьте токен' : 'Не подключён')),
+      field('Токен бота', inp('tg', '', { type: 'password', autocomplete: 'off', placeholder: s.telegram.tokenSet ? 'задан — оставьте пустым, чтобы не менять' : '123456789:AA…' }), 'Выдаёт @BotFather: /mybots → бот → API Token'));
+
+    var yk = h('div', { class: 'card' }, h('h2', { text: 'Оплата — ЮKassa' }),
+      status(st.payment === 'yookassa', st.payment === 'yookassa' ? 'Настоящая оплата включена' : 'Тестовый режим: ссылка выдаётся бесплатно'),
+      field('shopId', inp('shop', s.yookassa.shopId, { inputmode: 'numeric', autocomplete: 'off' })),
+      field('Секретный ключ', inp('key', '', { type: 'password', autocomplete: 'off', placeholder: s.yookassa.secretKeySet ? 'задан — оставьте пустым, чтобы не менять' : 'live_…' }), 'Кабинет ЮKassa → Интеграция → Ключи API'),
+      h('label', { class: 'chk f' }, h('input', { type: 'checkbox', id: 'receipt', checked: s.yookassa.receipt }), 'Отправлять чеки через ЮKassa (54-ФЗ)'),
+      h('p', { class: 'f-h' }, 'Адрес для уведомлений в кабинете ЮKassa: ', h('code', { text: (s.site.url || location.origin) + '/api/yookassa' }), ' (старый ', h('code', { text: '/api/yk/notify' }), ' тоже работает).'));
+
+    var site = h('div', { class: 'card' }, h('h2', { text: 'Сайт и контакты' }),
+      field('Адрес сайта', inp('url', s.site.url, { placeholder: 'https://onlyda.ru' })),
+      field('Почта поддержки', inp('email', s.site.email, { type: 'email' })),
+      field('Телефон', inp('phone', s.site.phone)),
+      field('Telegram поддержки', inp('tgsup', s.site.telegram, { placeholder: '@имя' })),
+      field('Номер счётчика Яндекс Метрики', inp('metrika', s.site.metrikaId, { inputmode: 'numeric' })),
+      field('Цена ссылки, ₽', inp('price', String(s.price), { inputmode: 'numeric' })));
+
+    var statusSel = h('select', { class: 'inp', id: 'sstatus' }, ['', 'самозанятый', 'ИП'].map(function (o) { return h('option', { value: o, selected: s.seller.status === o, text: o || '— выберите —' }); }));
+    var seller = h('div', { class: 'card' }, h('h2', { text: 'Исполнитель (для оферты)' }),
+      field('Статус', statusSel), field('ФИО полностью', inp('sname', s.seller.name)), field('ИНН', inp('sinn', s.seller.inn, { inputmode: 'numeric' })),
+      field('ОГРНИП (для ИП)', inp('sogrn', s.seller.ogrnip)), field('Адрес (для ИП)', inp('saddr', s.seller.address)));
+
+    var save = h('button', { class: 'btn', type: 'button', text: 'Сохранить' });
+    save.addEventListener('click', function () {
+      ok.textContent = ''; err.textContent = ''; save.disabled = true; save.textContent = 'Сохраняю…';
+      var body = {
+        site: { url: val('url'), email: val('email'), phone: val('phone'), telegram: val('tgsup'), metrikaId: val('metrika') },
+        seller: { status: val('sstatus'), name: val('sname'), inn: val('sinn'), ogrnip: val('sogrn'), address: val('saddr') },
+        price: val('price'),
+        telegram: { token: val('tg') },
+        yookassa: { shopId: val('shop'), secretKey: val('key'), receipt: document.getElementById('receipt').checked },
+      };
+      api('PUT', '/api/admin/settings', body).then(function (r) {
+        save.disabled = false; save.textContent = 'Сохранить';
+        if (r._status === 401) return login('Сессия закончилась — войдите снова');
+        if (!r.ok) { err.textContent = r.error || 'Ошибка'; return; }
+        render(r); var m = document.querySelector('.ok-msg'); if (m) m.textContent = 'Сохранено ✓';
+      });
+    });
+
+    var pw = h('div', { class: 'card' }, h('h2', { text: 'Пароль админки' }),
+      s.passwordChanged ? null : h('p', { class: 'error', text: 'Пароль ещё первоначальный — смените его.' }),
+      field('Текущий пароль', inp('pcur', '', { type: 'password', autocomplete: 'current-password' })),
+      field('Новый пароль (от 10 символов)', inp('pnew', '', { type: 'password', autocomplete: 'new-password' })));
+    var pmsg = h('div', { class: 'ok-msg' }), perr = h('div', { class: 'error' });
+    pw.append(h('button', { class: 'btn btn-ghost', type: 'button', text: 'Сменить пароль', on: { click: function () {
+      pmsg.textContent = ''; perr.textContent = '';
+      api('POST', '/api/admin/password', { current: val('pcur'), next: document.getElementById('pnew').value }).then(function (r) {
+        if (r.ok) { pmsg.textContent = 'Пароль изменён ✓'; document.getElementById('pcur').value = ''; document.getElementById('pnew').value = ''; }
+        else perr.textContent = r.error || 'Ошибка';
+      });
+    } } }), pmsg, perr);
+
+    app.append(h('h1', { text: 'Админка' }), tg, yk, site, seller, h('div', { class: 'bar' }, save, ok, err), pw,
+      h('p', { class: 'f-h', text: 'Версия сайта: ' + (st.version || 'неизвестна') }));
+  }
+
+  function load() { api('GET', '/api/admin/settings').then(function (d) { if (d._status === 401) login(); else render(d); }); }
+  document.getElementById('logout').addEventListener('click', function () { api('POST', '/api/admin/logout').then(function () { login(); }); });
+  load();
+})();
+</script>
+</body>
+</html>
