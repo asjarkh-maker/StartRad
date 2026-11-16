@@ -22,6 +22,10 @@
   .chk { display: flex; gap: 10px; align-items: center; font-weight: 600; }
   .chk input { width: 20px; height: 20px; }
   code { background: #fff1f5; padding: 2px 6px; border-radius: 6px; }
+  [hidden] { display: none !important; }
+  .pw { position: relative; }
+  .pw .inp { padding-right: 104px; }
+  .pw .eye { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); border: 0; background: #fff1f5; color: var(--pink); font: 700 13px 'Manrope', sans-serif; border-radius: 10px; padding: 8px 12px; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -55,7 +59,19 @@
     return fetch(url, { method: method, headers: body ? { 'content-type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined, credentials: 'same-origin' })
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { d._status = r.status; return d; }); });
   }
-  function field(label, input, hint) { return h('label', { class: 'f' }, h('span', { class: 'f-l', text: label }), input, hint ? h('span', { class: 'f-h', text: hint }) : null); }
+  function reveal(input) {
+    var btn = h('button', { type: 'button', class: 'eye', 'aria-label': 'Показать', text: 'Показать' });
+    btn.addEventListener('click', function () {
+      var show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      btn.textContent = show ? 'Скрыть' : 'Показать';
+      btn.setAttribute('aria-label', btn.textContent);
+      input.focus();
+    });
+    return h('div', { class: 'pw' }, input, btn);
+  }
+  function field(label, input, hint) {
+    if (input.tagName === 'INPUT' && input.type === 'password') input = reveal(input); return h('label', { class: 'f' }, h('span', { class: 'f-l', text: label }), input, hint ? h('span', { class: 'f-h', text: hint }) : null); }
   function inp(id, value, attrs) { var a = Object.assign({ class: 'inp', id: id, value: value || '' }, attrs || {}); return h('input', a); }
   var val = function (id) { return document.getElementById(id).value.trim(); };
 
