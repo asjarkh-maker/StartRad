@@ -314,8 +314,8 @@ app.get('/api/m/:token/pay', rate('paycheck', 240, 3600e3), async (req, res) => 
   catch (e) { console.error('ЮKassa:', e.message); res.json({ paid: inv.paid, status: inv.payment.status }); }
 });
 
-// уведомления ЮKassa (адрес указывается в личном кабинете: https://домен/api/yookassa)
-app.post('/api/yookassa', express.json({ limit: '64kb' }), async (req, res) => {
+// уведомления ЮKassa (адрес в личном кабинете: https://домен/api/yookassa; /api/yk/notify — адрес прежнего сайта)
+app.post(['/api/yookassa', '/api/yk/notify'], express.json({ limit: '64kb' }), async (req, res) => {
   res.status(200).end();
   try {
     const o = obj(obj(req.body).object);
