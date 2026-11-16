@@ -100,6 +100,21 @@ cd /d "$caddyDir"
   Start-ScheduledTask -TaskName 'TolkoDaCaddy'
 }
 
+Write-Host '==> Автообновление (каждые 2 минуты)'
+$auto = Join-Path $app 'deploy\autoupdate-windows.ps1'
+if ((Test-Path $auto) -and ($app -eq 'C:\tolko-da') -and (Get-ScheduledTask -TaskName 'TolkoDaAutoUpdate' -ErrorAction SilentlyContinue)) {
+  # задача уже есть; не трогаем её — обновление может идти прямо из неё
+  Write-Host '    Уже включено. Журнал: C:\tolko-da\autoupdate.log'
+} elseif ((Test-Path $auto) -and ($app -eq 'C:\tolko-da')) {
+  $aAction  = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$auto`""
+  $aTrigger = New-ScheduledTaskTrigger -Once -At ((Get-Date).AddMinutes(1)) -RepetitionInterval (New-TimeSpan -Minutes 2) -RepetitionDuration (New-TimeSpan -Days 3650)
+  $aSettings = New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Minutes 20) -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
+  Register-ScheduledTask -TaskName 'TolkoDaAutoUpdate' -Action $aAction -Trigger $aTrigger -Principal $principal -Settings $aSettings | Out-Null
+  Write-Host '    Сайт будет сам обновляться с GitHub. Журнал: C:\tolko-da\autoupdate.log'
+} else {
+  Write-Host '    Пропущено: автообновление работает, когда сайт установлен в C:\tolko-da'
+}
+
 Write-Host '==> Проверка'
 Start-Sleep -Seconds 4
 try {

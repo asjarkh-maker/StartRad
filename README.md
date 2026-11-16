@@ -33,6 +33,12 @@ $f="$env:TEMP\tolko-update.ps1"; iwr https://raw.githubusercontent.com/asjarkh-m
 
 Анимированные стикеры — [Noto Emoji Animation](https://googlefonts.github.io/noto-emoji-animation/) (CC BY 4.0), плеер — lottie-web (MIT).
 
+### Автообновление на Windows-сервере
+
+После первой установки или обновления командой выше на сервере появляется задача `TolkoDaAutoUpdate`. Раз в 2 минуты она спрашивает у GitHub номер последней версии ветки `feature/constructor` и, если он новый, сама скачивает её и перезапускает сайт (данные, настройки и домен сохраняются). Журнал — `C:\tolko-da\autoupdate.log`.
+
+Без токена GitHub разрешает 60 запросов в час, поэтому интервал — 2 минуты. Для приватного репозитория положите токен GitHub только на чтение в `C:\tolko-da\data\github-token.txt`.
+
 ## Запуск
 
 На Windows: установите [Node.js](https://nodejs.org) (LTS) и дважды щёлкните `start.bat` — сайт откроется на http://localhost:3000.
