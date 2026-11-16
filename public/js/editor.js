@@ -34,8 +34,8 @@
   const defaults = () => ({
     toName: '', fromName: '', theme: 'pink', photo: '',
     gate: { type: 'envelope', text: '' },
-    ask: { title: 'Пойдёшь со мной на свидание?', text: '', sticker: '🥺', yes: 'Да 💖', noLines: [], voice: '', video: '' },
-    confirm: { title: 'Ура! Я так рад(а)!', text: '', sticker: '🥰' },
+    ask: { title: 'Пойдёшь со мной на свидание?', text: '', sticker: '🥺', yes: 'Да 💖', noLines: [], noMode: 'run', yesFx: 'burst' },
+    confirm: { enabled: true, picture: 'sticker', photo: '', title: 'Ура! Я так рад(а)!', text: '', sticker: '🥰', button: 'Дальше' },
     date: { enabled: true, title: 'Когда тебе удобно?', text: 'Выбери день и время — я подстроюсь.', sticker: '🗓️' },
     choices: [{ title: 'Куда пойдём?', multi: false, items: [{ name: 'Кино', emoji: '🎬' }, { name: 'Кофейня', emoji: '☕' }, { name: 'Прогулка', emoji: '🌳' }] }],
     final: { title: 'Это свидание!', text: 'Жду нашей встречи 💞', sticker: '🥳' },
@@ -110,8 +110,21 @@
   function emojiPicker(label, cur, onPick) {
     const own = h('input', { type: 'text', class: 'inp inp-emoji', maxlength: 8, placeholder: 'своё', value: STICKERS.includes(cur) ? '' : cur || '' });
     own.addEventListener('input', () => onPick(own.value.trim()));
-    return h('div', { class: 'f' }, h('span', { class: 'f-l', text: label }),
+    return h('div', { class: 'f' }, label ? h('span', { class: 'f-l', text: label }) : null,
       h('div', { class: 'emojis' }, STICKERS.map((e) => h('button', { type: 'button', class: 'emo' + (cur === e ? ' on' : ''), text: e, 'aria-label': e, on: { click: () => onPick(e) } })), own));
+  }
+  const NO_MODES = [
+    ['run', '🏃', 'Убегает', 'не поймать'], ['shrink', '🤏', 'Уменьшается', '«Да» при этом растёт'],
+    ['kiss', '💋', 'Уговаривает', 'поцелуи и «ну пожалуйста»'], ['turn', '🔄', 'Становится «Да»', 'после первого нажатия'],
+    ['honest', '🙂', 'Честный ответ', 'можно отказаться'],
+  ];
+  const YES_FX = [['burst', '💥', 'Взрыв сердечек', ''], ['rain', '💕', 'Дождь из сердечек', ''], ['none', '➡️', 'Без анимации', '']];
+  function optionGrid(label, path, list, def) {
+    const cur = get(path) || def;
+    return h('div', { class: 'f' }, h('span', { class: 'f-l', text: label }),
+      h('div', { class: 'opts' }, list.map(([val, e, title, sub]) => h('button', {
+        type: 'button', class: 'opt' + (cur === val ? ' on' : ''), 'aria-pressed': String(cur === val), on: { click: () => set(path, val, true) },
+      }, h('span', { class: 'opt-e', text: e, 'aria-hidden': 'true' }), title, sub ? h('small', { text: sub }) : null))));
   }
   const panelHead = (title, sub) => [h('h2', { class: 'p-title', text: title }), sub ? h('p', { class: 'p-sub', text: sub }) : null];
 
@@ -130,12 +143,6 @@
     c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
     return new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('Не получилось обработать фото'))), 'image/jpeg', 0.86));
   }
-  async function uploadBlob(blob, kind) {
-    const r = await fetch(`/api/upload?kind=${kind}`, { method: 'POST', body: blob, headers: { 'content-type': blob.type || 'application/octet-stream' } });
-    const d = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(d.error || 'Не удалось загрузить');
-    return d.file;
-  }
   async function uploadPhoto(file) {
     const blob = await prepareImage(file);
     const r = await fetch('/api/upload?kind=image', { method: 'POST', body: blob, headers: { 'content-type': blob.type || 'application/octet-stream' } });
@@ -143,110 +150,22 @@
     if (!r.ok) throw new Error(d.error || 'Не удалось загрузить');
     return d.file;
   }
-  function photoField() {
+  function photoField(path = 'photo', label = 'Фото (необязательно)') {
     const input = h('input', { type: 'file', accept: 'image/*', class: 'sr-only' });
     const status = h('span', { class: 'f-h' });
+    const cur = get(path);
     input.addEventListener('change', async () => {
       const f = input.files[0]; if (!f) return;
       status.textContent = 'Загружаю…';
-      try { set('photo', await uploadPhoto(f), true); } catch (e) { status.textContent = e.message; }
+      try { set(path, await uploadPhoto(f), true); } catch (e) { status.textContent = e.message; }
     });
-    return h('div', { class: 'f' }, h('span', { class: 'f-l', text: 'Фото (необязательно)' }),
-      cfg.photo
-        ? h('div', { class: 'photo-row' }, h('img', { class: 'photo-thumb', src: `/u/${cfg.photo}`, alt: '' }),
-          h('button', { type: 'button', class: 'btn btn-ghost btn-sm', text: 'Убрать', on: { click: () => set('photo', '', true) } }))
-        : h('label', { class: 'btn btn-ghost btn-sm upload' }, '📷 Добавить фото', input),
+    return h('div', { class: 'f' }, label ? h('span', { class: 'f-l', text: label }) : null,
+      cur
+        ? h('div', { class: 'photo-row' }, h('img', { class: 'photo-thumb', src: `/u/${cur}`, alt: '' }),
+          h('button', { type: 'button', class: 'btn btn-ghost btn-sm', text: 'Убрать', on: { click: () => set(path, '', true) } }))
+        : h('label', { class: 'btn btn-ghost btn-sm upload' }, '📷 Загрузить фото', input),
+      h('span', { class: 'f-h', text: 'JPG, PNG, WebP или GIF' }),
       status);
-  }
-
-  // ---------- голосовое и кружок ----------
-  const canRecord = () => window.isSecureContext && navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder;
-  const pickMime = (list) => list.find((m) => window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) || '';
-  let rec = null; // текущая запись
-
-  function stopRecording(save) {
-    if (!rec) return;
-    rec.save = save;
-    clearInterval(rec.tick);
-    if (rec.mr.state !== 'inactive') rec.mr.stop(); else rec.finish();
-  }
-
-  function mediaField(kind) {
-    const isVideo = kind === 'video';
-    const path = isVideo ? 'ask.video' : 'ask.voice';
-    const label = isVideo ? 'Видео-кружок (необязательно)' : 'Голосовое (необязательно)';
-    const maxSec = isVideo ? 30 : 60;
-    const status = h('span', { class: 'f-h' });
-    const cur = get(path);
-    const box = h('div', { class: 'f' }, h('span', { class: 'f-l', text: label }));
-
-    if (cur) {
-      const media = isVideo
-        ? h('video', { class: 'media-thumb round', src: `/u/${cur}`, controls: true, playsinline: true, preload: 'metadata' })
-        : h('audio', { src: `/u/${cur}`, controls: true, preload: 'metadata' });
-      box.append(h('div', { class: 'photo-row' }, media,
-        h('button', { type: 'button', class: 'btn btn-ghost btn-sm', text: 'Убрать', on: { click: () => set(path, '', true) } })));
-      return box;
-    }
-
-    const file = h('input', { type: 'file', accept: isVideo ? 'video/*' : 'audio/*', class: 'sr-only' });
-    file.addEventListener('change', async () => {
-      const f = file.files[0]; if (!f) return;
-      status.textContent = 'Загружаю…';
-      try { set(path, await uploadBlob(f, isVideo ? 'video' : 'audio'), true); } catch (e) { status.textContent = e.message; }
-    });
-    const row = h('div', { class: 'media-row' });
-    const live = h('div', { class: 'media-live' });
-
-    async function start() {
-      if (rec) stopRecording(false);
-      status.textContent = '';
-      let stream;
-      try {
-        stream = await navigator.mediaDevices.getUserMedia(isVideo
-          ? { audio: true, video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 480 } } }
-          : { audio: true });
-      } catch (e) { status.textContent = 'Нет доступа к ' + (isVideo ? 'камере' : 'микрофону') + '. Разрешите его в браузере или загрузите файл.'; return; }
-      const mime = pickMime(isVideo ? ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4'] : ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg']);
-      const mr = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
-      const chunks = [];
-      const t0 = Date.now();
-      const timer = h('b', { text: '0:00' });
-      const stopBtn = h('button', { type: 'button', class: 'btn btn-sm', text: '■ Готово', on: { click: () => stopRecording(true) } });
-      const cancel = h('button', { type: 'button', class: 'btn btn-ghost btn-sm', text: 'Отмена', on: { click: () => stopRecording(false) } });
-      live.innerHTML = '';
-      if (isVideo) { const v = h('video', { class: 'media-thumb round', playsinline: true, muted: true, autoplay: true }); v.muted = true; v.srcObject = stream; live.append(v); }
-      live.append(h('div', { class: 'media-rec' }, h('span', { class: 'rec-dot' }), timer, ` / ${maxSec} с`), stopBtn, cancel);
-      row.hidden = true;
-      rec = {
-        mr, save: false,
-        tick: setInterval(() => {
-          const sec = Math.floor((Date.now() - t0) / 1000);
-          timer.textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
-          if (sec >= maxSec) stopRecording(true);
-        }, 250),
-        finish: async () => {
-          stream.getTracks().forEach((t) => t.stop());
-          const save = rec && rec.save;
-          rec = null;
-          live.innerHTML = ''; row.hidden = false;
-          if (!save || !chunks.length) return;
-          status.textContent = 'Загружаю…';
-          try { set(path, await uploadBlob(new Blob(chunks, { type: (mr.mimeType || mime || '').split(';')[0] }), isVideo ? 'video' : 'audio'), true); }
-          catch (e) { status.textContent = e.message; }
-        },
-      };
-      mr.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
-      mr.onstop = () => rec && rec.finish();
-      mr.start(1000);
-    }
-
-    if (canRecord()) row.append(h('button', { type: 'button', class: 'btn btn-ghost btn-sm', text: isVideo ? '🎥 Записать кружок' : '🎙 Записать голосовое', on: { click: start } }));
-    row.append(h('label', { class: 'btn btn-ghost btn-sm upload' }, '📎 Загрузить файл', file));
-    box.append(row, live, status);
-    if (!canRecord()) box.append(h('span', { class: 'f-h', text: 'Запись с микрофона и камеры работает, когда сайт открыт по https. Пока можно загрузить готовый файл.' }));
-    else box.append(h('span', { class: 'f-h', text: `До ${maxSec} секунд.` }));
-    return box;
   }
 
   // ---------- шаги ----------
@@ -273,15 +192,27 @@
         textInput('ask.yes', 'Текст кнопки «Да»', { max: 30 }),
         emojiPicker('Стикер', cfg.ask.sticker, (e) => set('ask.sticker', e, true)),
         photoField(),
-        mediaField('voice'),
-        mediaField('video'),
-        textArea('ask.noLinesText', 'Фразы на кнопке «Нет» (по одной в строке)', { max: 400, rows: 4, ph: 'Нет\nТочно?\nПодумай ещё', hint: 'Пусто — будут стандартные' })];
+        optionGrid('Что делает кнопка «Нет»', 'ask.noMode', NO_MODES, 'run'),
+        ['run', 'kiss'].includes(cfg.ask.noMode || 'run')
+          ? textArea('ask.noLinesText', 'Фразы на кнопке «Нет» (по одной в строке)', { max: 400, rows: 4, ph: cfg.ask.noMode === 'kiss' ? 'Нет\nНу пожалуйста 🥺\nПодумай ещё разок 💋' : 'Нет\nТочно?\nПодумай ещё', hint: 'Пусто — будут стандартные' })
+          : null,
+        cfg.ask.noMode === 'honest' ? h('p', { class: 'f-h', text: 'Получатель сможет ответить «нет» — вы увидите это на странице приглашения.' }) : null,
+        optionGrid('Что делает кнопка «Да»', 'ask.yesFx', YES_FX, 'burst')];
     },
     confirm() {
-      return [...panelHead('Экран после «Да»'),
-        textInput('confirm.title', 'Заголовок', { max: 120 }),
-        textArea('confirm.text', 'Текст', { max: 400 }),
-        emojiPicker('Стикер', cfg.confirm.sticker, (e) => set('confirm.sticker', e, true))];
+      const c = cfg.confirm;
+      const list = [...panelHead('Экран после «Да»', 'Короткая пауза после согласия — пошутить или порадоваться вместе.'),
+        switchRow('confirm.enabled', 'Показывать этот экран', 'Можно выключить и сразу перейти дальше')];
+      if (!c.enabled) return list;
+      const pic = c.picture || 'sticker';
+      list.push(h('div', { class: 'f' }, h('span', { class: 'f-l', text: 'Картинка' }),
+        tabs([['sticker', '😊 Стикер'], ['photo', '📷 Своё фото'], ['none', 'Без картинки']], pic, (v) => set('confirm.picture', v, true))));
+      if (pic === 'sticker') list.push(emojiPicker('', c.sticker, (e) => set('confirm.sticker', e, true)));
+      if (pic === 'photo') list.push(photoField('confirm.photo', ''));
+      list.push(textInput('confirm.title', 'Заголовок', { max: 120, ph: 'Ура! Я так рад(а)!' }),
+        textArea('confirm.text', 'Текст (необязательно)', { max: 400 }),
+        textInput('confirm.button', 'Надпись на кнопке', { max: 30, ph: 'Дальше' }));
+      return list;
     },
     date() {
       const list = [...panelHead('Дата и время', 'Получатель сам выберет, когда ему удобно.'),
@@ -375,9 +306,9 @@
     const id = STEPS[stepIdx].id;
     if (id === 'who' || id === 'ask') return 'ask';
     if (id === 'gate' || id === 'done') return 'gate';
-    if (id === 'confirm') return 'confirm';
-    if (id === 'date') return cfg.date.enabled ? 'date' : 'confirm';
-    if (id === 'choices') return cfg.choices.length ? 'choice' + Math.min(activeChoice, cfg.choices.length - 1) : 'confirm';
+    if (id === 'confirm') return cfg.confirm.enabled ? 'confirm' : 'ask';
+    if (id === 'date') return cfg.date.enabled ? 'date' : 'ask';
+    if (id === 'choices') return cfg.choices.length ? 'choice' + Math.min(activeChoice, cfg.choices.length - 1) : 'ask';
     return 'final';
   };
   function effectiveConfig() {
@@ -392,8 +323,9 @@
     const iso = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
     const target = startAt || (STEPS[stepIdx].id === 'choices' && cfg.choices.length ? 'choice' + Math.min(activeChoice, c.choices.length - 1) : previewScreen());
     if (player) player.destroy();
+    const shown = Player.screensOf(c);
     player = Player.mount($('#phone'), c, {
-      mode: 'preview', startAt: c.choices.some(() => true) || !String(target).startsWith('choice') ? target : 'confirm',
+      mode: 'preview', startAt: shown.includes(target) ? target : 'ask',
       demo: { date: c.date.enabled ? { date: iso, time: '19:00' } : null, picks: c.choices.map((q) => [q.items[0].name]) },
     });
   }
@@ -410,7 +342,6 @@
     $('#next').style.display = stepIdx === STEPS.length - 1 ? 'none' : '';
   }
   function renderPanel() {
-    stopRecording(false);
     const panel = $('#panel');
     const keep = panel.scrollTop;
     panel.innerHTML = '';
@@ -420,7 +351,6 @@
     panel.scrollTop = keep;
   }
   function goStep(i) {
-    stopRecording(false);
     stepIdx = Math.max(0, Math.min(STEPS.length - 1, i));
     saveDraft(); renderDots(); renderPanel(); refreshPreview();
     $('#panel').scrollTop = 0;

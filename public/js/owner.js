@@ -29,7 +29,7 @@
 
   function render(d) {
     const link = `${location.origin}/i/${d.slug}`;
-    const a = d.answer, answered = Boolean(a && a.finishedAt);
+    const a = d.answer, declined = Boolean(a && a.declinedAt), answered = Boolean(a && (a.finishedAt || a.declinedAt));
     root.innerHTML = '';
     if (params.get('paid') && d.paid) root.append(h('div', { class: 'banner', text: 'Оплата прошла — ссылка готова 💌' }));
     if (params.get('new')) root.append(h('div', { class: 'banner', text: 'Приглашение создано! Сохраните эту страницу в закладки — здесь появится ответ.' }));
@@ -90,8 +90,12 @@
       h('div', { class: 'stats' },
         h('div', { class: 'stat' }, h('b', { text: d.stats.opens }), h('span', { text: 'открытий' })),
         h('div', { class: 'stat' }, h('b', { text: d.stats.noClicks }), h('span', { text: 'попыток нажать «Нет»' })),
-        h('div', { class: 'stat' }, h('b', { text: answered ? 'Да! 💖' : a && a.yesAt ? 'Отвечает…' : d.stats.opens ? 'Читает…' : 'Ждём' }), h('span', { text: 'статус' }))));
-    if (a && a.yesAt) {
+        h('div', { class: 'stat' }, h('b', { text: declined ? 'Нет' : answered ? 'Да! 💖' : a && a.yesAt ? 'Отвечает…' : d.stats.opens ? 'Читает…' : 'Ждём' }), h('span', { text: 'статус' }))));
+    if (declined) {
+      box.append(h('div', { class: 'answer-box' }, h('h3', { text: `${d.config.toName} честно ответил(а) «нет»` }),
+        h('p', { text: 'Не расстраивайтесь — честный ответ лучше неопределённости.' }),
+        h('p', { class: 'f-h', text: fmtTime(a.declinedAt) })));
+    } else if (a && a.yesAt) {
       const rows = [];
       if (a.date && a.date.date) rows.push(['Когда', Player.prettyDate(a.date.date, a.date.time)]);
       (a.choices || []).forEach((c) => { if (c) rows.push([c.title || 'Выбор', c.picks.join(', ')]); });

@@ -18,6 +18,8 @@
 
   const HEART = '<svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.2C.8 8.3 2.9 4.5 6.6 4.5c2.1 0 3.6 1.2 4.4 2.5.8-1.3 2.3-2.5 4.4-2.5 3.7 0 5.8 3.8 4.2 7.3C19.5 16.4 12 21 12 21z"/></svg>';
   const DEFAULT_NO = ['Нет', 'Точно?', 'Подумай ещё', 'Не-а 🙈', 'Не поймаешь', 'Ну пожалуйста'];
+  const KISS_LINES = ['Нет', 'Ну пожалуйста 🥺', 'Подумай ещё разок 💋', 'А если с мороженым? 🍦', 'Я буду очень ждать 💞', 'Ну скажи «да» 😚'];
+  const NO_MODES = ['run', 'shrink', 'kiss', 'turn', 'honest'];
 
   // ---------- анимированные стикеры (Noto Animated Emoji, CC BY 4.0) ----------
   const stCode = (e) => Array.from(e).map((c) => c.codePointAt(0)).filter((cp) => cp !== 0xfe0f).map((cp) => cp.toString(16)).join('_');
@@ -44,7 +46,8 @@
     return time ? `${txt}, ${time}` : txt;
   }
   function screensOf(cfg) {
-    const list = ['gate', 'ask', 'confirm'];
+    const list = ['gate', 'ask'];
+    if (!cfg.confirm || cfg.confirm.enabled !== false) list.push('confirm');
     if (cfg.date && cfg.date.enabled) list.push('date');
     (cfg.choices || []).forEach((_, i) => list.push('choice' + i));
     list.push('final');
@@ -89,32 +92,6 @@
     }
     const stopAnims = () => { while (anims.length) { try { anims.pop().destroy(); } catch (e) { /* уже удалена */ } } };
     const photo = () => (cfg.photo ? h('img', { class: 'pl-photo', src: `/u/${cfg.photo}`, alt: '' }) : null);
-    function videoCircle(file) {
-      if (!file) return null;
-      const v = h('video', { src: `/u/${file}`, playsinline: true, loop: true, autoplay: true, muted: true, preload: 'auto' });
-      v.muted = true;
-      const icon = h('span', { class: 'pl-circle-i', text: '🔇' });
-      const wrap = h('button', { class: 'pl-circle', type: 'button', 'aria-label': 'Включить звук' }, v, icon);
-      wrap.addEventListener('click', () => {
-        if (v.muted) { v.muted = false; v.currentTime = 0; v.play().catch(() => {}); icon.textContent = '🔊'; }
-        else { v.muted = true; icon.textContent = '🔇'; }
-      });
-      return wrap;
-    }
-    function voiceBubble(file) {
-      if (!file) return null;
-      const a = h('audio', { src: `/u/${file}`, preload: 'metadata' });
-      const btn = h('span', { class: 'pl-voice-b', text: '▶' });
-      const bar = h('i'), track = h('span', { class: 'pl-voice-t' }, bar);
-      const time = h('span', { class: 'pl-voice-s', text: '0:00' });
-      const fmt = (x) => (isFinite(x) ? `${Math.floor(x / 60)}:${String(Math.floor(x % 60)).padStart(2, '0')}` : '');
-      a.addEventListener('loadedmetadata', () => { time.textContent = fmt(a.duration) || ''; });
-      a.addEventListener('timeupdate', () => { if (isFinite(a.duration) && a.duration) bar.style.width = (a.currentTime / a.duration * 100) + '%'; time.textContent = fmt(a.currentTime); });
-      a.addEventListener('ended', () => { btn.textContent = '▶'; bar.style.width = '0'; });
-      const wrap = h('button', { class: 'pl-voice', type: 'button', 'aria-label': 'Голосовое сообщение' }, btn, track, time, a);
-      wrap.addEventListener('click', () => { if (a.paused) { a.play().catch(() => {}); btn.textContent = '❚❚'; } else { a.pause(); btn.textContent = '▶'; } });
-      return wrap;
-    }
     const names = () => cfg.toName || '';
     const fill = (t) => String(t || '')
       .replace(/\{имя\}|\{name\}/gi, names())
@@ -124,7 +101,6 @@
     function show(id) {
       cur = order.indexOf(id);
       stopAnims();
-      stage.querySelectorAll('audio,video').forEach((m) => { try { m.pause(); } catch (e) { /* пусто */ } });
       stage.innerHTML = '';
       stage.scrollTop = 0;
       const el = ({ gate, ask, confirm, date, final })[id] ? ({ gate, ask, confirm, date, final })[id]() : choice(Number(id.slice(6)));
@@ -160,19 +136,27 @@
       const yes = h('button', { class: 'pl-btn pl-yes', type: 'button', text: a.yes || 'Да 💖' });
       const no = h('button', { class: 'pl-btn pl-no', type: 'button', text: (a.noLines && a.noLines[0]) || DEFAULT_NO[0] });
       const actions = h('div', { class: 'pl-actions' }, yes, no);
-      wrap.append(...[videoCircle(a.video), a.video ? null : photo(), a.video || cfg.photo ? null : sticker(a.sticker),
+      wrap.append(...[photo(), cfg.photo ? null : sticker(a.sticker),
         h('h2', { class: 'pl-title', text: fill(a.title) }),
-        a.text ? h('p', { class: 'pl-text', text: fill(a.text) }) : null, voiceBubble(a.voice), actions].filter(Boolean));
+        a.text ? h('p', { class: 'pl-text', text: fill(a.text) }) : null, actions].filter(Boolean));
 
-      const lines = a.noLines && a.noLines.length ? a.noLines : DEFAULT_NO;
-      let tries = 0, scale = 1;
+      const mode = NO_MODES.includes(a.noMode) ? a.noMode : 'run';
+      const own = a.noLines && a.noLines.length ? a.noLines : null;
+      const lines = own || (mode === 'kiss' ? KISS_LINES : DEFAULT_NO);
+      let tries = 0, scale = 1, said = false, turned = false, sure = false;
+      const countNo = () => { tries++; answers.noClicks++; emit('no', { n: answers.noClicks }); };
+      const grow = (max = 1.4, step = 0.06) => { scale = Math.min(1 + tries * step, max); yes.style.transform = `scale(${scale})`; };
+      function sayYes() {
+        if (said) return; said = true;
+        emit('yes', { no: answers.noClicks });
+        playYes(yes, next);
+      }
+
       function dodge(e) {
         if (e && e.cancelable) e.preventDefault();
-        tries++; answers.noClicks++;
-        emit('no', { n: answers.noClicks });
+        countNo();
         no.textContent = lines[tries % lines.length];
-        scale = Math.min(1 + tries * 0.06, 1.4);
-        yes.style.transform = `scale(${scale})`;
+        grow();
         const sr = stage.getBoundingClientRect();
         if (!no.classList.contains('away')) {
           const r = no.getBoundingClientRect();
@@ -209,19 +193,60 @@
         }
         no.style.left = best.x + 'px'; no.style.top = best.y + 'px';
       }
-      no.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') dodge(); });
-      no.addEventListener('touchstart', dodge, { passive: false });
-      no.addEventListener('click', dodge);
-      yes.addEventListener('click', () => { emit('yes', { no: answers.noClicks }); next(); });
+
+      // «Нет» уменьшается, «Да» растёт
+      function shrink(e) {
+        if (e && e.cancelable) e.preventDefault();
+        countNo(); grow(1.6, 0.12);
+        const k = Math.max(0, 1 - tries * 0.2);
+        no.style.transform = `scale(${k})`;
+        if (k <= 0.05) { no.style.visibility = 'hidden'; no.disabled = true; }
+      }
+      // уговаривает: поцелуи и «ну пожалуйста»
+      function kiss(e) {
+        if (e && e.cancelable) e.preventDefault();
+        countNo(); grow();
+        no.textContent = lines[tries % lines.length];
+        no.classList.remove('pl-shake'); void no.offsetWidth; no.classList.add('pl-shake');
+        particles(no, ['💋', '😘', '💕'], 9, 'pl-float-up');
+      }
+      // с первого нажатия превращается в «Да»
+      function turn(e) {
+        if (e && e.cancelable) e.preventDefault();
+        if (turned) { sayYes(); return; }
+        countNo(); turned = true;
+        no.classList.add('pl-flip');
+        later(() => { no.textContent = a.yes || 'Да 💖'; no.classList.remove('pl-no'); no.classList.add('pl-yes'); }, 200);
+      }
+      // честный ответ: можно отказаться, после подтверждения
+      function honest(e) {
+        if (e && e.cancelable) e.preventDefault();
+        if (!sure) { sure = true; no.textContent = 'Да, точно нет'; return; }
+        emit('decline', {});
+        stopAnims(); stage.innerHTML = '';
+        stage.append(h('div', { class: 'pl-screen pl-center' }, sticker('😊', 'big'),
+          h('h2', { class: 'pl-title', text: 'Спасибо за честный ответ' }),
+          h('p', { class: 'pl-text', text: cfg.fromName ? `${cfg.fromName} узнает твой ответ.` : 'Твой ответ отправлен.' }),
+          live ? h('a', { class: 'pl-link', href: '/', text: 'Создать своё приглашение' }) : null));
+      }
+
+      const handler = { run: dodge, shrink, kiss, turn, honest }[mode];
+      if (mode === 'run') no.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') dodge(); });
+      if (mode === 'run' || mode === 'kiss' || mode === 'shrink') no.addEventListener('touchstart', handler, { passive: false });
+      no.addEventListener('click', handler);
+      yes.addEventListener('click', sayYes);
       return wrap;
     }
 
     function confirm() {
       const c = cfg.confirm || {};
-      return h('div', { class: 'pl-screen pl-center' }, sticker(c.sticker || '🥰', 'big'),
+      const pic = c.picture || 'sticker';
+      const img = pic === 'photo' && c.photo ? h('img', { class: 'pl-photo', src: `/u/${c.photo}`, alt: '' })
+        : pic === 'sticker' ? sticker(c.sticker || '🥰', 'big') : null;
+      return h('div', { class: 'pl-screen pl-center' }, img,
         h('h2', { class: 'pl-title', text: fill(c.title) || 'Ура! Я так рад(а)!' }),
         c.text ? h('p', { class: 'pl-text', text: fill(c.text) }) : null,
-        h('button', { class: 'pl-btn', type: 'button', text: 'Дальше', on: { click: next } }));
+        h('button', { class: 'pl-btn', type: 'button', text: c.button || 'Дальше', on: { click: next } }));
     }
 
     function date() {
@@ -284,6 +309,28 @@
         f.text ? h('p', { class: 'pl-text', text: fill(f.text) }) : null, sum,
         h('p', { class: 'pl-hint', text: cfg.fromName ? `${cfg.fromName} уже знает ответ 😊` : 'Ответ уже отправлен 😊' }),
         live ? h('a', { class: 'pl-link', href: '/', text: 'Создать своё приглашение' }) : null);
+    }
+
+    // частицы из точки элемента: сердечки, поцелуи
+    function particles(fromEl, chars, count, cls) {
+      const rr = root.getBoundingClientRect(), r = fromEl.getBoundingClientRect();
+      const box = h('div', { class: 'pl-fx', 'aria-hidden': 'true' });
+      const cx = r.left - rr.left + r.width / 2, cy = r.top - rr.top + r.height / 2;
+      for (let i = 0; i < count; i++) {
+        const ang = (Math.PI * 2 * i) / count + Math.random() * 0.5;
+        const dist = 70 + Math.random() * 90;
+        box.append(h('span', { class: cls, text: chars[i % chars.length],
+          style: `left:${cx}px;top:${cy}px;--dx:${Math.cos(ang) * dist}px;--dy:${Math.sin(ang) * dist - (cls === 'pl-float-up' ? 60 : 0)}px;font-size:${16 + Math.random() * 14}px;animation-delay:${Math.random() * 0.08}s` }));
+      }
+      root.append(box);
+      later(() => box.remove(), 1400);
+    }
+    function playYes(btn, done) {
+      const fx = ['burst', 'rain', 'none'].includes(cfg.ask && cfg.ask.yesFx) ? cfg.ask.yesFx : 'burst';
+      if (fx === 'none') return done();
+      if (fx === 'burst') particles(btn, ['💖', '💕', '❤️', '✨'], 18, 'pl-burst');
+      else confetti();
+      later(done, fx === 'burst' ? 750 : 900);
     }
 
     function confetti() {

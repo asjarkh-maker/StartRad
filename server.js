@@ -64,7 +64,7 @@ const rate = (name, max, windowMs) => (req, res, next) =>
 
 // ---------- проверка и очистка конфигурации ----------
 const THEMES = ['pink', 'peach', 'mint', 'night', 'lilac'];
-const FILE_RE = /^[a-f0-9]{24}\.(jpg|png|webp|gif|webm|ogg|mp4|mp3|wav)$/;
+const FILE_RE = /^[a-f0-9]{24}\.(jpg|png|webp|gif)$/;
 function uploaded(name, exts) {
   if (typeof name !== 'string' || !FILE_RE.test(name)) return '';
   if (!exts.includes(name.split('.').pop())) return '';
@@ -89,10 +89,16 @@ function normalizeConfig(raw) {
       sticker: s(ask.sticker, 16),
       yes: s(ask.yes, 30) || 'Да 💖',
       noLines: arr(ask.noLines, 8).map((x) => s(x, 40)).filter(Boolean),
-      voice: uploaded(ask.voice, ['webm', 'ogg', 'mp4', 'mp3', 'wav']),
-      video: uploaded(ask.video, ['webm', 'mp4']),
+      noMode: ['run', 'shrink', 'kiss', 'turn', 'honest'].includes(ask.noMode) ? ask.noMode : 'run',
+      yesFx: ['burst', 'rain', 'none'].includes(ask.yesFx) ? ask.yesFx : 'burst',
     },
-    confirm: { title: s(confirm.title, 120), text: s(confirm.text, 400), sticker: s(confirm.sticker, 16) },
+    confirm: {
+      enabled: confirm.enabled !== false,
+      picture: ['sticker', 'photo', 'none'].includes(confirm.picture) ? confirm.picture : 'sticker',
+      photo: uploaded(confirm.photo, ['jpg', 'png', 'webp', 'gif']),
+      title: s(confirm.title, 120), text: s(confirm.text, 400), sticker: s(confirm.sticker, 16),
+      button: s(confirm.button, 30),
+    },
     date: { enabled: date.enabled !== false, title: s(date.title, 120), text: s(date.text, 300), sticker: s(date.sticker, 16) },
     choices: arr(c.choices, 3).map((q) => {
       q = obj(q);
@@ -159,11 +165,9 @@ const meta = () => ({
 app.get('/api/meta', (req, res) => res.json(meta()));
 app.get('/api/config', (req, res) => res.json({ price: S().price, paymentRequired: paymentMode() !== 'off' })); // для главной
 
-// ---- загрузка фото, голосовых и видео ----
+// ---- загрузка фото ----
 const KINDS = {
   image: { exts: ['jpg', 'png', 'webp', 'gif'], max: 7 * 1024 * 1024, label: 'Фото: подходят JPG, PNG, WebP или GIF' },
-  audio: { exts: ['webm', 'ogg', 'mp4', 'mp3', 'wav'], max: 8 * 1024 * 1024, label: 'Голосовое: подходят WebM, OGG, M4A, MP3 или WAV' },
-  video: { exts: ['webm', 'mp4'], max: 30 * 1024 * 1024, label: 'Видео: подходят MP4 или WebM' },
 };
 function sniff(buf) {
   if (buf.length < 12) return null;
@@ -179,7 +183,7 @@ function sniff(buf) {
   if (at(0, 'RIFF') && at(8, 'WAVE')) return 'wav';
   return null;
 }
-app.post('/api/upload', rate('upload', 40, 3600e3), express.raw({ type: () => true, limit: '30mb' }), (req, res) => {
+app.post('/api/upload', rate('upload', 40, 3600e3), express.raw({ type: () => true, limit: '8mb' }), (req, res) => {
   const kind = req.query.kind || 'image';
   const k = Object.prototype.hasOwnProperty.call(KINDS, kind) ? KINDS[kind] : null;
   if (!k) return res.status(400).json({ error: 'Неизвестный тип файла' });
@@ -312,7 +316,7 @@ app.get('/api/i/:slug', (req, res) => {
   if (!inv) return res.status(404).json({ error: 'Приглашение не найдено' });
   if (!inv.paid) return res.status(402).json({ error: 'Приглашение ещё не активировано' });
   if (expired(inv)) return res.status(410).json({ error: 'Срок действия приглашения истёк' });
-  res.json({ config: inv.config, answered: Boolean(inv.answer && inv.answer.finishedAt) });
+  res.json({ config: inv.config, answered: Boolean(inv.answer && (inv.answer.finishedAt || inv.answer.declinedAt)), declined: Boolean(inv.answer && inv.answer.declinedAt) });
 });
 app.post('/api/i/:slug/event', rate('event', 300, 3600e3), (req, res) => {
   const inv = db[req.params.slug];
@@ -334,8 +338,14 @@ app.post('/api/i/:slug/event', rate('event', 300, 3600e3), (req, res) => {
       }
       break;
     }
+    case 'decline':
+      // отказ возможен только в режиме «Честный ответ» и только один раз
+      if (inv.config.ask.noMode !== 'honest' || a.finishedAt || a.declinedAt) break;
+      a.declinedAt = new Date().toISOString();
+      telegram.notify(inv, `🙂 <b>${telegram.esc(inv.config.toName)}</b> честно ответил(а) «нет»`);
+      break;
     case 'final':
-      if (!a.finishedAt) {
+      if (!a.finishedAt && !a.declinedAt) {
         a.finishedAt = new Date().toISOString();
         const lines = [`💖 <b>${telegram.esc(inv.config.toName)}</b> сказал(а) «да»!`];
         if (a.date && a.date.date) {
