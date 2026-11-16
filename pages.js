@@ -7,7 +7,7 @@ const LOGO = '<a class="logo" href="/"><span class="logo-mark"><svg viewBox="0 0
 // незаполненное поле реквизитов видно сразу, чтобы не опубликовать документ с пустыми местами
 const need = (v, label) => (v ? esc(v) : `<mark class="todo">${esc(label)}</mark>`);
 
-function footer() {
+function footer(ver = '') {
   return `<footer class="footer"><div class="wrap foot">
   <nav class="foot-links">
     <a href="/dlya-devushki">Для девушки</a><a href="/dlya-parnya">Для парня</a><a href="/14-fevralya">14 февраля</a>
@@ -17,11 +17,11 @@ function footer() {
     <a href="/contacts">Контакты</a><a href="/payment">Оплата и возврат</a><a href="/oferta">Оферта</a>
     <a href="/privacy">Политика конфиденциальности</a><a href="/consent">Согласие на обработку данных</a>
   </nav>
-  <p class="foot-note">© ${new Date().getFullYear()} только да. Анимированные стикеры — <a href="https://googlefonts.github.io/noto-emoji-animation/" rel="noopener">Noto Emoji Animation</a>, лицензия CC BY 4.0.</p>
+  <p class="foot-note">© ${new Date().getFullYear()} только да. Анимированные стикеры — <a href="https://googlefonts.github.io/noto-emoji-animation/" rel="noopener">Noto Emoji Animation</a>, лицензия CC BY 4.0.${ver ? ` <span class="ver">Версия ${esc(ver)}</span>` : ''}</p>
 </div></footer>`;
 }
 
-function layout({ title, description, body, path }, S) {
+function layout({ title, description, body, path }, S, ver) {
   const canonical = S.site.url ? `<link rel="canonical" href="${esc(S.site.url + path)}">` : '';
   return `<!DOCTYPE html>
 <html lang="ru">
@@ -41,7 +41,7 @@ ${canonical}
 <main class="wrap doc">
 ${body}
 </main>
-${footer()}
+${footer(ver)}
 </body>
 </html>`;
 }
@@ -265,8 +265,8 @@ const PAGES = [
   { path: '/consent', title: 'Согласие на обработку персональных данных — Только да', description: 'Согласие на обработку персональных данных.', body: consent },
 ];
 
-function render(page, S) {
-  return layout({ title: page.title, description: page.description, body: page.body(S), path: page.path }, S);
+function render(page, S, ver) {
+  return layout({ title: page.title, description: page.description, body: page.body(S), path: page.path }, S, ver);
 }
 
 module.exports = { PAGES, render, esc, footer };

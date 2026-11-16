@@ -149,3 +149,8 @@ vite.config.ts.timestamp-*
 .turbo
 
 data/
+
+# служебные файлы автообновления на сервере
+.deployed-sha
+autoupdate.log
+autoupdate.lock
