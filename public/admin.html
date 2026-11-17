@@ -146,8 +146,8 @@
       field('Телефон', inp('phone', s.site.phone)),
       field('Telegram поддержки', inp('tgsup', s.site.telegram, { placeholder: '@имя' })),
       field('Номер счётчика Яндекс Метрики', inp('metrika', s.site.metrikaId, { inputmode: 'numeric' })),
-      field('Приглашений отправлено до этого сайта', inp('sentBefore', String(s.site.sentBefore || 0), { inputmode: 'numeric' })),
-      h('p', { class: 'f-h', text: 'Только реальное число. На главной: это число + оплаченные здесь. Счётчик появится, когда наберётся 30.' }),
+      field('Счётчик на главной («… приглашений уже отправлено»)', inp('sentBefore', String(s.site.sentBefore || 0), { inputmode: 'numeric' })),
+      h('p', { class: 'f-h', text: 'Показывается как есть, с плюсом: 3700 → «3 700+». 0 — счётчик скрыт.' }),
       field('Цена ссылки, ₽', inp('price', String(s.price), { inputmode: 'numeric' })));
 
     var statusSel = h('select', { class: 'inp', id: 'sstatus' }, ['', 'самозанятый', 'ИП'].map(function (o) { return h('option', { value: o, selected: s.seller.status === o, text: o || '— выберите —' }); }));
