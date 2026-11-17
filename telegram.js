@@ -45,6 +45,7 @@ async function setupMenu(tk) {
   const url = createUrl();
   const menu = url ? { type: 'web_app', text: 'Создать', web_app: { url } } : { type: 'default' };
   await call('setChatMenuButton', { menu_button: menu }, tk).catch((e) => console.error('Telegram: кнопка меню —', e.message));
+  await call('setMyCommands', { commands: [{ command: 'my', description: 'Мои приглашения и ссылки' }, { command: 'start', description: 'Создать приглашение' }] }, tk).catch(() => {});
 }
 
 // проверка данных мини-приложения (initData) по токену бота
@@ -96,9 +97,14 @@ async function handle(update) {
   const m = update.message;
   if (!m || !m.chat || typeof m.text !== 'string') return;
   const chatId = m.chat.id;
+  // мои приглашения: ссылки на страницы приглашений, привязанных к этому чату
+  if (/^\/(my|мои)\b|^мои приглашения/i.test(m.text.trim()) && hooks.myInvites) {
+    await call('sendMessage', { chat_id: chatId, text: hooks.myInvites(chatId), parse_mode: 'HTML', disable_web_page_preview: true });
+    return;
+  }
   const match = m.text.match(/^\/start(?:@\w+)?(?:\s+([A-Za-z0-9_-]{8,64}))?/);
   if (!match) {
-    await call('sendMessage', { chat_id: chatId, text: 'Я помогаю с приглашениями «Только да»: создайте приглашение кнопкой ниже — и я пришлю сюда, когда его откроют и ответят.', ...createButton() });
+    await call('sendMessage', { chat_id: chatId, text: 'Я помогаю с приглашениями «Только да»: создайте приглашение кнопкой ниже — и я пришлю сюда, когда его откроют и ответят.\n\nВаши приглашения и ссылки на них — команда /my', ...createButton() });
     return;
   }
   if (match[1] && match[1].startsWith('bk_')) {

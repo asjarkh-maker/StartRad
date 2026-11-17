@@ -592,5 +592,17 @@ app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
   res.status(500).json({ error: 'Ошибка сервера' });
 });
 
-telegram.start({ findByCode: (code) => byTgCode.get(code) || null, save, onBackupCode, onLinked: catchUp });
+function myInvites(chatId) {
+  const base = S().site.url || '';
+  const list = Object.values(db).filter((i) => (i.tgChats || []).includes(chatId)).sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)).slice(0, 10);
+  if (!list.length) return 'Пока нет приглашений, привязанных к этому чату. Создайте приглашение — и подключите бота на его странице.';
+  return ['💌 <b>Ваши приглашения</b>', ...list.map((i) => {
+    const st = !i.paid ? 'не оплачено' : expired(i) ? 'срок истёк' : i.answer && i.answer.finishedAt ? 'ответ «да» 💖' : i.answer && i.answer.declinedAt ? 'ответ «нет»' : i.stats.opens ? 'открывали' : 'ещё не открывали';
+    const lines = [`\n<b>${telegram.esc(i.config.toName)}</b> — ${st}`];
+    if (i.paid && !expired(i)) lines.push(`Ссылка для отправки: ${base}/i/${i.slug}`);
+    lines.push(`<a href="${base}/m/${i.token}">Страница приглашения</a>`);
+    return lines.join('\n');
+  })].join('\n');
+}
+telegram.start({ findByCode: (code) => byTgCode.get(code) || null, save, onBackupCode, onLinked: catchUp, myInvites });
 app.listen(PORT, () => console.log(`«Только да» запущен: http://localhost:${PORT} (оплата: ${paymentMode()})`));
