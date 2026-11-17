@@ -245,7 +245,7 @@
         h('div', { class: 'f' }, h('span', { class: 'f-l', text: 'Приглашение' }),
           h('div', { class: 'gate-tiles two' }, tile('toGender', 'f', '👩', 'Ей'), tile('toGender', 'm', '👨', 'Ему'))),
         h('div', { class: 'f' }, h('span', { class: 'f-l', text: 'Кто зовёт' }),
-          tabs([['m', '🙋‍♂️ Я парень'], ['f', '🙋‍♀️ Я девушка'], ['', 'Не указывать']], cfg.fromGender, (v) => setGender('fromGender', v))),
+          h('div', { class: 'from-tabs' }, tabs([['m', '🙋‍♂️ Я парень'], ['f', '🙋‍♀️ Я девушка'], ['', 'Не важно']], cfg.fromGender, (v) => setGender('fromGender', v)))),
         textInput('toName', cfg.toGender === 'm' ? 'Как его зовут' : 'Как её зовут', { max: 40, ph: cfg.toGender === 'm' ? 'Дима' : 'Аня' }),
         textInput('fromName', 'Ваше имя (необязательно)', { max: 40, ph: cfg.fromGender === 'f' ? 'Аня' : 'Саша' }),
         h('div', { class: 'f' }, h('span', { class: 'f-l', text: 'Оформление' }),

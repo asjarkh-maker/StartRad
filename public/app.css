@@ -323,3 +323,5 @@ button.pl-link { background: none; border: 0; cursor: pointer; font: 700 14px 'M
 .gate-tiles.two { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 0; }
 .sex-e { font-size: 34px; line-height: 1; }
 .gtile.sex { flex-direction: row; justify-content: center; gap: 12px; padding: 16px 8px; font-size: 18px; }
+.from-tabs .tabs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+.from-tabs .tab { padding-left: 6px; padding-right: 6px; white-space: nowrap; font-size: 14px; text-align: center; }
