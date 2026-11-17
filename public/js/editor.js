@@ -61,6 +61,7 @@
   // сменили пол — меняем только те тексты, которые человек не правил сам
   function setGender(key, val) {
     const before = textsFor(cfg.toGender, cfg.fromGender);
+    if (key === 'toGender') cfg.fromGender = val === 'm' ? 'f' : 'm'; // зовёт противоположный пол
     if (key === 'toGender') { const def = (g) => (g === 'm' ? 'night' : 'pink'); if (cfg.theme === def(cfg.toGender)) cfg.theme = def(val); }
     cfg[key] = val;
     const after = textsFor(cfg.toGender, cfg.fromGender);
@@ -68,7 +69,7 @@
     changed(true);
   }
   const defaults = () => withTexts({
-    toName: '', fromName: '', toGender: 'f', fromGender: '', theme: 'pink', photo: '',
+    toName: '', fromName: '', toGender: 'f', fromGender: 'm', theme: 'pink', photo: '',
     gate: { type: 'envelope', text: '' },
     ask: { title: 'Пойдёшь со мной на свидание?', text: '', sticker: 'pic:kitties', yes: 'Да 💖', noLines: [], noMode: 'run', yesFx: 'burst' },
     confirm: { enabled: true, picture: 'sticker', photo: '', title: 'Ура! Лучший ответ на свете 💖', text: '', sticker: 'pic:hug', button: 'Дальше' },
@@ -244,10 +245,8 @@
       return [...panelHead('Кого зовём?', 'Выберите, кому приглашение, — тексты подстроятся сами.'),
         h('div', { class: 'f' }, h('span', { class: 'f-l', text: 'Приглашение' }),
           h('div', { class: 'gate-tiles two' }, tile('toGender', 'f', '👩', 'Ей'), tile('toGender', 'm', '👨', 'Ему'))),
-        h('div', { class: 'f' }, h('span', { class: 'f-l', text: 'Кто зовёт' }),
-          h('div', { class: 'from-tabs' }, tabs([['m', '🙋‍♂️ Я парень'], ['f', '🙋‍♀️ Я девушка'], ['', 'Не важно']], cfg.fromGender, (v) => setGender('fromGender', v)))),
         textInput('toName', cfg.toGender === 'm' ? 'Как его зовут' : 'Как её зовут', { max: 40, ph: cfg.toGender === 'm' ? 'Дима' : 'Аня' }),
-        textInput('fromName', 'Ваше имя (необязательно)', { max: 40, ph: cfg.fromGender === 'f' ? 'Аня' : 'Саша' }),
+        textInput('fromName', 'Ваше имя (необязательно)', { max: 40, ph: cfg.toGender === 'm' ? 'Аня' : 'Саша' }),
         h('div', { class: 'f' }, h('span', { class: 'f-l', text: 'Оформление' }),
           h('div', { class: 'theme-cards' }, THEMES.map(([id, name]) => h('button', {
             type: 'button', class: 'tcard' + (cfg.theme === id ? ' on' : ''), 'aria-pressed': String(cfg.theme === id), on: { click: () => set('theme', id, true) },
@@ -533,7 +532,7 @@
       const q = (params.get('ask') || '').trim().slice(0, 140);
       if (q) cfg.ask.title = q;
       const to = params.get('to');
-      if ((to === 'm' || to === 'f') && to !== cfg.toGender) { const before = textsFor(cfg.toGender, cfg.fromGender); cfg.toGender = to; const after = textsFor(to, cfg.fromGender); for (const k of Object.keys(after)) if ((get(k) || '') === before[k]) { const [x, y] = k.split('.'); cfg[x][y] = after[k]; } }
+      if ((to === 'm' || to === 'f') && to !== cfg.toGender) { const before = textsFor(cfg.toGender, cfg.fromGender); cfg.toGender = to; cfg.fromGender = to === 'm' ? 'f' : 'm'; const after = textsFor(to, cfg.fromGender); for (const k of Object.keys(after)) if ((get(k) || '') === before[k]) { const [x, y] = k.split('.'); cfg[x][y] = after[k]; } }
       const th = params.get('theme');
       if (th && THEMES.some(([id]) => id === th)) cfg.theme = th;
       // параметры убираем из адреса, чтобы перезагрузка не затёрла правки
