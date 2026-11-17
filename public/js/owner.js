@@ -146,6 +146,16 @@
         rows.map(([k, v]) => h('p', {}, h('b', { text: k + ': ' }), v)),
         h('p', { class: 'f-h', text: fmtTime(a.finishedAt || a.yesAt) })));
     }
+    if (d.stats.opens || a) {
+      const rb = h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: '🔄 Сбросить ответ', style: 'margin-top:14px' });
+      rb.addEventListener('click', async () => {
+        if (!confirm('Сбросить ответ и счётчики? Пригодится, если вы проходили приглашение сами. Получатель сможет ответить заново, бот снова пришлёт уведомления.')) return;
+        rb.disabled = true;
+        const r = await fetch(`/api/m/${token}/reset`, { method: 'POST' });
+        if (r.ok) load(); else { rb.disabled = false; alert('Не получилось, попробуйте ещё раз'); }
+      });
+      box.append(rb, h('p', { class: 'f-h', text: 'Проверяли приглашение сами? Сбросьте ответ перед отправкой — иначе получатель увидит «ответ уже отправлен».' }));
+    }
     root.append(box);
     clearTimeout(timer);
     if (!answered) timer = setTimeout(load, 10000);

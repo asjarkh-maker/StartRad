@@ -297,6 +297,13 @@ function owned(req, res) {
   return inv;
 }
 app.get('/api/m/:token', (req, res) => { const inv = owned(req, res); if (inv) res.json(ownerView(inv)); });
+// сбросить ответ и счётчики — если владелец прошёл приглашение сам, чтобы проверить
+app.post('/api/m/:token/reset', rate('reset', 30, 3600e3), (req, res) => {
+  const inv = owned(req, res); if (!inv) return;
+  inv.answer = null; inv.stats = { opens: 0, noClicks: 0 };
+  const t = yesTimers.get(inv.slug); if (t) { clearTimeout(t); yesTimers.delete(inv.slug); }
+  save(); res.json(ownerView(inv));
+});
 app.put('/api/m/:token', rate('edit', 60, 3600e3), (req, res) => {
   const inv = owned(req, res); if (!inv) return;
   const config = normalizeConfig((req.body || {}).config);
