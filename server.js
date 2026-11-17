@@ -602,6 +602,7 @@ function myInvites(chatId) {
   return ['💌 <b>Ваши приглашения</b>', ...list.map((i) => {
     const st = !i.paid ? 'не оплачено' : expired(i) ? 'срок истёк' : i.answer && i.answer.finishedAt ? 'ответ «да» 💖' : i.answer && i.answer.declinedAt ? 'ответ «нет»' : i.stats.opens ? 'открывали' : 'ещё не открывали';
     const lines = [`\n<b>${telegram.esc(i.config.toName)}</b> — ${st}`];
+    if (i.answer && i.answer.yesAt) lines.push(...answerLines(i));
     if (i.paid && !expired(i)) lines.push(`Ссылка для отправки: ${base}/i/${i.slug}`);
     lines.push(`<a href="${base}/m/${i.token}">Страница приглашения</a>`);
     return lines.join('\n');
