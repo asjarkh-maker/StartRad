@@ -412,6 +412,7 @@ function finalMessage(inv, head) {
 // «да» сообщаем, даже если получатель не дошёл до конца: через 2 минуты после нажатия, если финала ещё нет
 const YES_WAIT = Number(process.env.YES_NOTIFY_MS) || 2 * 60e3;
 const yesTimers = new Map();
+const FINAL_WAIT = Number(process.env.FINAL_NOTIFY_MS) || 2500;
 function scheduleYes(inv) {
   if (yesTimers.has(inv.slug)) return;
   yesTimers.set(inv.slug, setTimeout(() => {
@@ -466,7 +467,8 @@ app.post('/api/i/:slug/event', rate('event', 300, 3600e3), (req, res) => {
       if (!a.finishedAt && !a.declinedAt) {
         a.finishedAt = new Date().toISOString();
         clearTimeout(yesTimers.get(inv.slug)); yesTimers.delete(inv.slug);
-        telegram.notify(inv, finalMessage(inv, a.yesNotified ? `✅ ${nameOf(inv)} — все ответы:` : null));
+        // небольшая пауза: если дата/выбор пришли следом, они попадут в сообщение
+        setTimeout(() => telegram.notify(inv, finalMessage(inv, a.yesNotified ? `✅ ${nameOf(inv)} — все ответы:` : null)), FINAL_WAIT);
       }
       break;
     default: return res.status(400).end();

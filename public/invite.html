@@ -24,9 +24,13 @@
     if (sub) { var c = document.createElement('p'); c.textContent = sub; box.append(c); }
     root.append(box);
   }
+  // события отправляем строго по очереди: иначе «готово» может обогнать выбранную дату
+  var queue = Promise.resolve();
   function send(type, data) {
     var body = JSON.stringify({ type: type, data: data || {} });
-    try { fetch('/api/i/' + slug + '/event', { method: 'POST', headers: { 'content-type': 'application/json' }, body: body, keepalive: true }); } catch (e) {}
+    queue = queue.then(function () {
+      return fetch('/api/i/' + slug + '/event', { method: 'POST', headers: { 'content-type': 'application/json' }, body: body, keepalive: true }).catch(function () {});
+    });
   }
   fetch('/api/i/' + encodeURIComponent(slug)).then(function (r) {
     return r.json().then(function (d) { return { ok: r.ok, status: r.status, d: d }; });
