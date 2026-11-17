@@ -104,6 +104,8 @@ function normalizeConfig(raw) {
     date = obj(c.date), fin = obj(c.final);
   return {
     toName: s(c.toName, 40),
+    toGender: c.toGender === 'm' ? 'm' : 'f',
+    fromGender: ['f', 'm'].includes(c.fromGender) ? c.fromGender : '',
     fromName: s(c.fromName, 40),
     theme: THEMES.includes(c.theme) ? c.theme : 'pink',
     photo: uploaded(c.photo, ['jpg', 'png', 'webp', 'gif']),
@@ -211,7 +213,14 @@ const meta = () => ({
   version: version() || null,
 });
 app.get('/api/meta', (req, res) => res.json(meta()));
-app.get('/api/config', (req, res) => res.json({ price: S().price, paymentRequired: paymentMode() !== 'off' })); // для главной
+// счётчик на главной: реальные оплаченные приглашения + отправленные до этого сайта
+function sentCount() {
+  const n = Object.values(db).filter((i) => i.paid).length + (S().site.sentBefore || 0);
+  if (n < 30) return 0;
+  const step = n >= 1000 ? 100 : 10;
+  return Math.floor(n / step) * step;
+}
+app.get('/api/config', (req, res) => res.json({ price: S().price, paymentRequired: paymentMode() !== 'off', sent: sentCount() })); // для главной
 
 // ---- загрузка фото ----
 const KINDS = {

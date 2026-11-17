@@ -146,6 +146,8 @@
       field('Телефон', inp('phone', s.site.phone)),
       field('Telegram поддержки', inp('tgsup', s.site.telegram, { placeholder: '@имя' })),
       field('Номер счётчика Яндекс Метрики', inp('metrika', s.site.metrikaId, { inputmode: 'numeric' })),
+      field('Приглашений отправлено до этого сайта', inp('sentBefore', String(s.site.sentBefore || 0), { inputmode: 'numeric' })),
+      h('p', { class: 'f-h', text: 'Только реальное число. На главной: это число + оплаченные здесь. Счётчик появится, когда наберётся 30.' }),
       field('Цена ссылки, ₽', inp('price', String(s.price), { inputmode: 'numeric' })));
 
     var statusSel = h('select', { class: 'inp', id: 'sstatus' }, ['', 'самозанятый', 'ИП'].map(function (o) { return h('option', { value: o, selected: s.seller.status === o, text: o || '— выберите —' }); }));
@@ -157,7 +159,7 @@
     save.addEventListener('click', function () {
       ok.textContent = ''; err.textContent = ''; save.disabled = true; save.textContent = 'Сохраняю…';
       var body = {
-        site: { url: val('url'), email: val('email'), phone: val('phone'), telegram: val('tgsup'), metrikaId: val('metrika') },
+        site: { url: val('url'), email: val('email'), phone: val('phone'), telegram: val('tgsup'), metrikaId: val('metrika'), sentBefore: val('sentBefore') },
         seller: { status: val('sstatus'), name: val('sname'), inn: val('sinn'), ogrnip: val('sogrn'), address: val('saddr') },
         price: val('price'),
         telegram: { token: val('tg') },

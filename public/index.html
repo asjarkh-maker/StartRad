@@ -84,8 +84,13 @@
       <div>
         <h1>Онлайн-<br>приглашение<br><span class="accent">на свидание</span></h1>
         <div class="subhead">где ответ — <span class="pill">только «да»</span></div>
+        <div class="for-who"><a class="fw fw-her" href="/dlya-devushki">для неё 💗</a><a class="fw fw-him" href="/dlya-parnya">и для него 💙</a></div>
         <p class="lead">Соберите милое приглашение за 3 минуты и отправьте ссылку. Кнопка «Нет» убегает, а вы сразу узнаете ответ, дату и место встречи.</p>
         <a class="btn" href="/create">Создать приглашение 💌</a>
+        <div class="proof" id="proof" hidden>
+          <span class="proof-av" aria-hidden="true"><img src="/pics/kitties.svg" alt=""><img src="/pics/bear.svg" alt=""><img src="/pics/bunny.svg" alt=""><img src="/pics/hug.svg" alt=""></span>
+          <span id="proofText"></span>
+        </div>
         <p class="fineprint">Готово за 3 минуты · без регистрации</p>
         <p class="fineprint"><a href="/dlya-devushki">Для девушки</a> · <a href="/dlya-parnya">Для парня</a> · <a href="/14-fevralya">14 февраля</a> · <a href="/godovshchina">Годовщина</a></p>
       </div>
@@ -186,6 +191,13 @@
 
   <script src="/js/tg.js"></script>
   <script src="/vendor/lottie_light.min.js" defer></script>
+  <script>
+    fetch('/api/config').then(function (r) { return r.json(); }).then(function (c) {
+      if (!c.sent) return;
+      document.getElementById('proofText').textContent = c.sent.toLocaleString('ru-RU') + '+ приглашений уже отправлено';
+      document.getElementById('proof').hidden = false;
+    }).catch(function () {});
+  </script>
   <script>
     // анимированные стикеры: загружаем, когда блок появляется на экране
     window.addEventListener('load', function () {

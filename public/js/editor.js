@@ -9,6 +9,7 @@
       if (v == null || v === false) continue;
       if (k === 'class') el.className = v;
       else if (k === 'text') el.textContent = v;
+      else if (k === 'html') el.innerHTML = v; // только свои константы (иконки)
       else if (k === 'on') for (const [ev, fn] of Object.entries(v)) el.addEventListener(ev, fn);
       else el.setAttribute(k, v === true ? '' : v);
     }
@@ -32,8 +33,35 @@
     'Чем займёмся': { title: 'Чем займёмся?', items: [['Боулинг', '🎳'], ['Квест', '🧩'], ['Караоке', '🎤'], ['Настолки', '🎮'], ['Танцы', '💃'], ['Пикник', '🧺']] },
   };
 
-  const defaults = () => ({
-    toName: '', fromName: '', theme: 'pink', photo: '',
+  // весёлые тексты по умолчанию с правильными окончаниями: to — кого зовём, from — кто зовёт
+  function textsFor(to, from) {
+    const a = (f, m) => (to === 'm' ? m : f);
+    const me = (f, m, n) => (from === 'f' ? f : from === 'm' ? m : n);
+    return {
+      'ask.text': me('Я долго думала, как бы это спросить… 🙈', 'Я долго думал, как бы это спросить… 🙈', 'Есть один очень важный вопрос… 🙈'),
+      'confirm.title': a('Подожди… ты правда сказала «да»? 😳', 'Подожди… ты правда сказал «да»? 😳'),
+      'confirm.text': me('А я уже приготовилась тебя уговаривать 😅', 'А я уже приготовился тебя уговаривать 😅', 'А у меня уже были заготовлены уговоры 😅'),
+      'confirm.button': 'Да, да, ДА!',
+      'date.title': a('Итак… когда ты свободна?', 'Итак… когда ты свободен?'),
+      'date.text': 'Выбери день и время — я подстроюсь 😉',
+      'final.title': me(a('Рада, что ты не отказалась 💖', 'Рада, что ты не отказался 💖'), a('Рад, что ты не отказалась 💖', 'Рад, что ты не отказался 💖'), a('Ура, ты согласилась! 💖', 'Ура, ты согласился! 💖')),
+      'final.text': a('Будь готова — будет весело 😉 Жду не дождусь!', 'Будь готов — будет весело 😉 Жду не дождусь!'),
+    };
+  }
+  function withTexts(c) {
+    for (const [path, v] of Object.entries(textsFor(c.toGender, c.fromGender))) { const k = path.split('.'); c[k[0]][k[1]] = v; }
+    return c;
+  }
+  // сменили пол — меняем только те тексты, которые человек не правил сам
+  function setGender(key, val) {
+    const before = textsFor(cfg.toGender, cfg.fromGender);
+    cfg[key] = val;
+    const after = textsFor(cfg.toGender, cfg.fromGender);
+    for (const path of Object.keys(after)) if ((get(path) || '') === before[path]) { const k = path.split('.'); cfg[k[0]][k[1]] = after[path]; }
+    changed(true);
+  }
+  const defaults = () => withTexts({
+    toName: '', fromName: '', toGender: 'f', fromGender: '', theme: 'pink', photo: '',
     gate: { type: 'envelope', text: '' },
     ask: { title: 'Пойдёшь со мной на свидание?', text: '', sticker: 'pic:kitties', yes: 'Да 💖', noLines: [], noMode: 'run', yesFx: 'burst' },
     confirm: { enabled: true, picture: 'sticker', photo: '', title: 'Ура! Лучший ответ на свете 💖', text: '', sticker: 'pic:hug', button: 'Дальше' },
@@ -122,6 +150,14 @@
     ['button', 'Кнопка «Открыть»', 'просто и быстро'], ['code', 'Код из цифр', 'открыть по секретному коду'],
     ['scratch', 'Стереть фон', 'стереть пальцем, как лотерею'], ['timer', 'В выбранное время', 'с обратным отсчётом'],
   ];
+  const GATE_ICONS = {
+    none: '<circle cx="12" cy="12" r="9"/><path d="M9 12h6M13 9l3 3-3 3"/>',
+    envelope: '<rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M4 7l8 6 8-6"/>',
+    button: '<rect x="3" y="7" width="18" height="10" rx="5"/><path d="M9 12h6"/>',
+    code: '<path d="M9 4L7 20M17 4l-2 16M4 9h16M3 15h16"/>',
+    scratch: '<path d="M14.5 4.5l5 5L10 19H5v-5z"/><path d="M11.5 7.5l5 5M10 19h10"/>',
+    timer: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/>',
+  };
   const GATE_PH = { envelope: 'Тебе письмо. Нажми на конверт 💌', button: 'Тебе письмо 💌', code: 'Введи код', scratch: 'Сотри, чтобы открыть', timer: 'Для тебя кое-что есть' };
   const FINAL_TITLES = ['Ура, встречаемся!', 'Договорились! 🤝', 'Жду с нетерпением!', 'Это будет чудесно ✨', 'Это свидание!'];
   const NO_MODES = [
@@ -199,6 +235,9 @@
       return [...panelHead('Кого зовём?', 'Имя увидит получатель — оно подставится в текст.'),
         textInput('toName', 'Кого приглашаете', { max: 40, ph: 'Аня' }),
         textInput('fromName', 'Ваше имя (необязательно)', { max: 40, ph: 'Саша' }),
+        h('div', { class: 'f' }, h('span', { class: 'f-l', text: 'Кого зовём' }), tabs([['f', '💗 Девушку'], ['m', '💙 Парня']], cfg.toGender, (v) => setGender('toGender', v))),
+        h('div', { class: 'f' }, h('span', { class: 'f-l', text: 'Кто зовёт' }), tabs([['f', 'Я девушка'], ['m', 'Я парень'], ['', 'Не важно']], cfg.fromGender, (v) => setGender('fromGender', v)),
+          h('span', { class: 'f-h', text: 'Чтобы в текстах были правильные окончания: «сказала / сказал».' })),
         h('div', { class: 'f' }, h('span', { class: 'f-l', text: 'Оформление' }),
           h('div', { class: 'theme-cards' }, THEMES.map(([id, name]) => h('button', {
             type: 'button', class: 'tcard' + (cfg.theme === id ? ' on' : ''), 'aria-pressed': String(cfg.theme === id), on: { click: () => set('theme', id, true) },
@@ -215,19 +254,11 @@
         if (id === 'timer' && !g.at) { const t = new Date(Date.now() + 864e5); t.setHours(19, 0, 0, 0); g.at = t.toISOString(); }
         changed(true);
       };
-      const mini = (id) => {
-        if (id === 'envelope') return h('span', { class: 'gmini-env' }, h('span', { class: 'gmini-seal', text: '♥' }));
-        if (id === 'button') return [h('span', { class: 'gmini-e', text: '💌' }), h('span', { class: 'tmini-yes', text: 'Открыть' })];
-        if (id === 'none') return [h('span', { class: 'tmini-h', text: '♥' }), h('span', { class: 'tmini-t' }), h('span', { class: 'tmini-b' }, h('span', { class: 'tmini-yes', text: 'Да' }), h('span', { class: 'tmini-no', text: 'Нет' }))];
-        if (id === 'code') return [h('span', { class: 'gmini-e', text: '🔐' }), h('span', { class: 'gmini-code', text: '• • • •' })];
-        if (id === 'scratch') return h('span', { class: 'gmini-scratch', text: 'сотри ✨' });
-        return [h('span', { class: 'gmini-e', text: '⏰' }), h('span', { class: 'gmini-code', text: '12:30:05' })];
-      };
       const out = [...panelHead('Как откроется приглашение', 'Первое, что увидит получатель.'),
-        h('div', { class: 'theme-cards two' }, GATES.map(([id, name, sub]) => h('button', {
-          type: 'button', class: 'tcard' + (g.type === id ? ' on' : ''), 'aria-pressed': String(g.type === id), on: { click: () => pick(id) },
-        }, h('span', { class: 'pl tmini gmini', 'data-theme': cfg.theme, 'aria-hidden': 'true' }, mini(id)),
-          h('span', { class: 'tcard-n', text: name }), h('small', { text: sub }))))];
+        h('div', { class: 'gate-tiles' }, GATES.map(([id, name]) => h('button', {
+          type: 'button', class: 'gtile' + (g.type === id ? ' on' : ''), 'aria-pressed': String(g.type === id), on: { click: () => pick(id) },
+        }, h('span', { class: 'gtile-i', 'aria-hidden': 'true', html: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${GATE_ICONS[id]}</svg>` }),
+          h('span', { class: 'gtile-n', text: name }))))];
       if (g.type === 'code') {
         const ci = h('input', { type: 'text', class: 'inp', inputmode: 'numeric', maxlength: 6, placeholder: 'Например, 1402', value: g.code || '', 'aria-label': 'Код' });
         ci.addEventListener('input', () => { ci.value = ci.value.replace(/\D/g, '').slice(0, 6); set('gate.code', ci.value); });
@@ -319,7 +350,7 @@
     final() {
       return [...panelHead('Финал', 'Последний экран. Дату и выбор получатель увидит списком.'),
         textInput('final.title', 'Заголовок', { max: 120 }),
-        h('div', { class: 'chips final-chips' }, FINAL_TITLES.map((t) => h('button', { type: 'button', class: 'chip' + (cfg.final.title === t ? ' on' : ''), text: t, on: { click: () => set('final.title', t, true) } }))),
+        h('div', { class: 'chips final-chips' }, [...new Set([textsFor(cfg.toGender, cfg.fromGender)['final.title'], ...FINAL_TITLES])].map((t) => h('button', { type: 'button', class: 'chip' + (cfg.final.title === t ? ' on' : ''), text: t, on: { click: () => set('final.title', t, true) } }))),
         textArea('final.text', 'Текст', { max: 600, hint: 'Можно писать {дата} и {выбор} — подставятся ответы получателя' }),
         emojiPicker('Стикер', cfg.final.sticker, (e) => set('final.sticker', e, true))];
     },
@@ -491,10 +522,12 @@
       if (d && d.cfg) { cfg = Object.assign(defaults(), d.cfg); stepIdx = Math.min(d.step || 0, STEPS.length - 1); }
       const q = (params.get('ask') || '').trim().slice(0, 140);
       if (q) cfg.ask.title = q;
+      const to = params.get('to');
+      if ((to === 'm' || to === 'f') && to !== cfg.toGender) { const before = textsFor(cfg.toGender, cfg.fromGender); cfg.toGender = to; const after = textsFor(to, cfg.fromGender); for (const k of Object.keys(after)) if ((get(k) || '') === before[k]) { const [x, y] = k.split('.'); cfg[x][y] = after[k]; } }
       const th = params.get('theme');
       if (th && THEMES.some(([id]) => id === th)) cfg.theme = th;
       // параметры убираем из адреса, чтобы перезагрузка не затёрла правки
-      if (params.has('ask') || params.has('theme')) history.replaceState(null, '', location.pathname);
+      if (params.has('ask') || params.has('theme') || params.has('to')) history.replaceState(null, '', location.pathname);
     }
     goStep(stepIdx);
   }
