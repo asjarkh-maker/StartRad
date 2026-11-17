@@ -58,7 +58,7 @@
   table.t th, table.t td { text-align: left; padding: 7px 6px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
   table.t th { color: var(--muted); font-weight: 600; font-size: 13px; }
   details.tv summary { cursor: pointer; color: var(--text-secondary); font-size: 13px; margin-top: 10px; }
-  @media (max-width: 640px) { .tiles { grid-template-columns: repeat(2, 1fr); } .lists { grid-template-columns: 1fr; } .tile b { font-size: 20px; } table.t { font-size: 13px; } }
+  @media (max-width: 640px) { .tiles { grid-template-columns: repeat(2, 1fr); } .lists { grid-template-columns: 1fr; } .tile b { font-size: 20px; } table.t { font-size: 13px; display: block; overflow-x: auto; white-space: nowrap; } }
 </style>
 </head>
 <body>
@@ -313,11 +313,12 @@
 
     var STATE = { yes: 'ответили «да» 💖', no: 'честное «нет»', opened: 'открыли', sent: 'ждёт' };
     var recent = h('div', { class: 'card' }, h('h3', { text: 'Последние оплаты' }),
-      st.recent.length ? h('table', { class: 't' }, h('tr', {}, h('th', { text: 'Когда' }), h('th', { text: 'Сумма' }), h('th', { text: 'Статус' }), h('th', { text: 'Откуда' })),
+      st.recent.length ? h('table', { class: 't' }, h('tr', {}, h('th', { text: 'Когда' }), h('th', { text: 'Сумма' }), h('th', { text: 'Статус' }), h('th', { text: 'Откуда' }), h('th', { text: 'Кому' }), h('th', { text: 'Номер платежа в ЮKassa' })),
         st.recent.map(function (r) {
           return h('tr', {}, h('td', { text: new Date(r.at).toLocaleString('ru-RU', { timeZone: 'Asia/Yekaterinburg', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) }),
-            h('td', { text: rub(r.amount) }), h('td', { text: STATE[r.state] + (r.expired ? ' · срок истёк' : '') }), h('td', { text: r.source === 'tg' ? 'бот' : 'сайт' }));
-        })) : h('p', { class: 'f-h', text: 'Оплат пока нет.' }));
+            h('td', { text: rub(r.amount) }), h('td', { text: STATE[r.state] + (r.expired ? ' · срок истёк' : '') }), h('td', { text: r.source === 'tg' ? 'бот' : 'сайт' }), h('td', { text: r.to || '—' }), h('td', {}, h('code', { text: r.payId || '—', style: 'font-size:12px;user-select:all' })));
+        })) : h('p', { class: 'f-h', text: 'Оплат пока нет.' }),
+      h('p', { class: 'f-h', text: 'Возврат: скопируйте номер платежа → кабинет ЮKassa → «Платежи» → вставьте номер в поиск → «Вернуть платёж». Там же видно почту и карту плательщика.' }));
 
     app.append(h('h1', { text: 'Админка' }), tabsBar(), periods, tiles, chartCard, lists, recent,
       h('p', { class: 'f-h', text: 'Время — ' + st.tz + '. Выручка и оплаты — только настоящие платежи ЮKassa' + (t.testPaid ? '; ещё ' + t.testPaid + ' ссылок выдано в тестовом режиме.' : '.') }));

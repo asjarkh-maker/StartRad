@@ -515,6 +515,7 @@ function computeStats(days) {
     at: i.paidAt, amount: Number(i.payment.amount) || 0,
     state: i.answer && i.answer.finishedAt ? 'yes' : i.answer && i.answer.declinedAt ? 'no' : i.stats.opens ? 'opened' : 'sent',
     expired: expired(i), source: i.source === 'tg' ? 'tg' : 'web',
+    payId: (i.payment && i.payment.id) || '', to: i.config.toName || '',
   }));
   return {
     days, tz: 'Уфа (UTC+5)',
