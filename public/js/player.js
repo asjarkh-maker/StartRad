@@ -424,16 +424,35 @@
         });
         grid.append(card);
       });
+      // свой вариант: если ничего из предложенного не подошло
+      const OWN = 'own';
+      const ownInp = h('input', { class: 'pl-input pl-input-full pl-own-inp', type: 'text', maxlength: 60, placeholder: 'Напиши своё место или идею', 'aria-label': 'Свой вариант', hidden: true });
+      if (q.own !== false) {
+        const card = h('button', { class: 'pl-card pl-card-own', type: 'button', 'aria-pressed': 'false' },
+          h('span', { class: 'pl-card-e', text: '✏️' }), h('span', { class: 'pl-card-n', text: 'Свой вариант' }));
+        card.addEventListener('click', () => {
+          if (picked.has(OWN)) picked.delete(OWN);
+          else { if (!q.multi) { picked.clear(); grid.querySelectorAll('.pl-card').forEach((c) => { c.classList.remove('on'); c.setAttribute('aria-pressed', 'false'); }); } picked.add(OWN); }
+          card.classList.toggle('on', picked.has(OWN)); card.setAttribute('aria-pressed', String(picked.has(OWN)));
+          ownInp.hidden = !picked.has(OWN); if (!ownInp.hidden) ownInp.focus();
+          err.textContent = '';
+        });
+        grid.append(card);
+        // выбор обычной карточки в режиме «одно» прячет поле своего варианта
+        grid.addEventListener('click', () => { if (!picked.has(OWN)) ownInp.hidden = true; });
+      }
       const btn = h('button', { class: 'pl-btn', type: 'button', text: 'Готово' });
       btn.addEventListener('click', () => {
         if (!picked.size) { err.textContent = q.multi ? 'Выбери хотя бы один вариант' : 'Выбери вариант'; return; }
-        const names_ = [...picked].map((k) => q.items[k].name);
+        const own = ownInp.value.trim();
+        if (picked.has(OWN) && !own) { err.textContent = 'Напиши свой вариант'; ownInp.focus(); return; }
+        const names_ = [...picked].map((k) => (k === OWN ? own : q.items[k].name));
         answers.picks[i] = names_;
         emit('choices', { index: i, title: q.title, picks: names_ });
         next();
       });
       return h('div', { class: 'pl-screen' }, h('h2', { class: 'pl-title', text: fill(q.title) || 'Что выберешь?' }),
-        q.multi ? h('p', { class: 'pl-hint', text: 'Можно выбрать несколько' }) : null, grid, err, btn);
+        q.multi ? h('p', { class: 'pl-hint', text: 'Можно выбрать несколько' }) : null, grid, ownInp, err, btn);
     }
 
     function final() {

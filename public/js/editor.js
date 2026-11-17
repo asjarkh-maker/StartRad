@@ -74,7 +74,7 @@
     ask: { title: 'Пойдёшь со мной на свидание?', text: '', sticker: 'pic:kitties', yes: 'Да 💖', noLines: [], noMode: 'run', yesFx: 'burst' },
     confirm: { enabled: true, picture: 'sticker', photo: '', title: 'Ура! Лучший ответ на свете 💖', text: '', sticker: 'pic:hug', button: 'Дальше' },
     date: { enabled: true, mode: 'ask', fixedDate: '', fixedTime: '', chat: true, picture: 'sticker', photo: '', title: 'Когда тебе удобно?', text: 'Выбери день и время — я подстроюсь.', sticker: 'pic:bear' },
-    choices: [{ title: 'Куда пойдём?', multi: false, items: [{ name: 'Парк', emoji: '🌳' }, { name: 'Ресторан', emoji: '🍽️' }, { name: 'Набережная', emoji: '🌅' }, { name: 'Уютный вечер дома', emoji: '🏠' }, { name: 'Кофейня', emoji: '☕' }, { name: 'Кино', emoji: '🎬' }] }],
+    choices: [{ title: 'Куда пойдём?', multi: false, own: true, items: [{ name: 'Парк', emoji: '🌳' }, { name: 'Ресторан', emoji: '🍽️' }, { name: 'Набережная', emoji: '🌅' }, { name: 'Уютный вечер дома', emoji: '🏠' }, { name: 'Кофейня', emoji: '☕' }, { name: 'Кино', emoji: '🎬' }] }],
     final: { title: 'Ура, встречаемся!', text: 'Жду нашей встречи 💞', sticker: 'pic:bunny' },
   });
 
@@ -335,7 +335,7 @@
       else {
         out.push(tabs(cfg.choices.map((_, i) => [i, `Вопрос ${i + 1}`]), activeChoice, (v) => { activeChoice = v; renderPanel(); refreshPreview(); }));
         const i = Math.min(activeChoice, cfg.choices.length - 1), q = cfg.choices[i], base = `choices.${i}`;
-        out.push(textInput(`${base}.title`, 'Вопрос', { max: 120 }), switchRow(`${base}.multi`, 'Можно выбрать несколько'));
+        out.push(textInput(`${base}.title`, 'Вопрос', { max: 120 }), switchRow(`${base}.multi`, 'Можно выбрать несколько'), switchRow(`${base}.own`, 'Кнопка «Свой вариант»', 'Получатель сможет вписать своё, если ничего не подошло'));
         q.items.forEach((it, k) => {
           const emo = h('input', { class: 'inp inp-emoji', maxlength: 8, value: it.emoji || '' });
           emo.addEventListener('input', () => set(`${base}.items.${k}.emoji`, emo.value.trim()));
@@ -351,8 +351,8 @@
         out.push(h('div', { class: 'f' }, h('span', { class: 'f-l', text: 'Добавить вопрос из готовых' }),
           h('div', { class: 'chips' }, Object.entries(PRESETS).map(([name, p]) => h('button', {
             type: 'button', class: 'chip', text: name,
-            on: { click: () => { cfg.choices.push({ title: p.title, multi: false, items: p.items.slice(0, 6).map(([n, e]) => ({ name: n, emoji: e })) }); activeChoice = cfg.choices.length - 1; changed(true); } },
-          })), h('button', { type: 'button', class: 'chip', text: '＋ Свой', on: { click: () => { cfg.choices.push({ title: '', multi: false, items: [{ name: '', emoji: '✨' }, { name: '', emoji: '✨' }] }); activeChoice = cfg.choices.length - 1; changed(true); } } }))));
+            on: { click: () => { cfg.choices.push({ title: p.title, multi: false, own: true, items: p.items.slice(0, 6).map(([n, e]) => ({ name: n, emoji: e })) }); activeChoice = cfg.choices.length - 1; changed(true); } },
+          })), h('button', { type: 'button', class: 'chip', text: '＋ Свой', on: { click: () => { cfg.choices.push({ title: '', multi: false, own: true, items: [{ name: '', emoji: '✨' }, { name: '', emoji: '✨' }] }); activeChoice = cfg.choices.length - 1; changed(true); } } }))));
       }
       return out;
     },

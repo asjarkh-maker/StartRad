@@ -141,6 +141,7 @@ function normalizeConfig(raw) {
       return {
         title: s(q.title, 120),
         multi: Boolean(q.multi),
+        own: q.own !== false,
         items: arr(q.items, 8).map((it) => {
           it = obj(it);
           return { name: s(it.name, 40), emoji: s(it.emoji, 16) };
@@ -453,7 +454,7 @@ app.post('/api/i/:slug/event', rate('event', 300, 3600e3), (req, res) => {
     case 'choices': {
       const i = Number(d.index);
       if (Number.isInteger(i) && i >= 0 && i < 3) {
-        a.choices[i] = { title: s(d.title, 120), picks: arr(d.picks, 8).map((x) => s(x, 40)).filter(Boolean) };
+        a.choices[i] = { title: s(d.title, 120), picks: arr(d.picks, 9).map((x) => s(x, 60)).filter(Boolean) };
       }
       break;
     }
