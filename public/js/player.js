@@ -76,6 +76,7 @@
 
     const later = (fn, ms) => { const t = setTimeout(fn, ms); timers.push(t); return t; };
     const anims = [];
+    let demoFx = null;
     function sticker(e, cls = '') {
       if (!e) return null;
       const el = h('div', { class: 'pl-sticker ' + cls, text: e, 'aria-hidden': 'true' });
@@ -235,6 +236,16 @@
       if (mode === 'run' || mode === 'kiss' || mode === 'shrink') no.addEventListener('touchstart', handler, { passive: false });
       no.addEventListener('click', handler);
       yes.addEventListener('click', sayYes);
+      // для превью в редакторе: показать эффект «Да» или поведение «Нет», не уходя с экрана
+      demoFx = {
+        yes() {
+          const fx = ['burst', 'rain', 'none'].includes(a.yesFx) ? a.yesFx : 'burst';
+          if (fx === 'burst') particles(yes, ['💖', '💕', '❤️', '✨'], 18, 'pl-burst');
+          else if (fx === 'rain') confetti();
+          else if (yes.animate) yes.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.12)' }, { transform: 'scale(1)' }], { duration: 350 });
+        },
+        no() { handler(); if (mode === 'kiss' || mode === 'run') later(() => handler(), 650); },
+      };
       return wrap;
     }
 
@@ -267,18 +278,44 @@
           h('button', { class: 'pl-btn', type: 'button', text: 'Подходит 👍', on: { click: () => pick({ date: d.fixedDate, time: d.fixedTime || '' }) } }),
           chatBtn);
       }
-      const di = h('input', { type: 'date', class: 'pl-input', min: todayISO(), 'aria-label': 'Дата' });
-      const ti = h('input', { type: 'time', class: 'pl-input', 'aria-label': 'Время' });
-      const err = h('div', { class: 'pl-err' });
+      // дни: сегодня, завтра и ещё три; время — популярные часы; всё можно поменять
+      const isoOf = (dt) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+      const WD = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+      const days = [];
+      for (let k = 0; k < 5; k++) { const dt = new Date(); dt.setDate(dt.getDate() + k); days.push({ iso: isoOf(dt), label: k === 0 ? 'Сегодня' : k === 1 ? 'Завтра' : `${WD[dt.getDay()]}, ${dt.getDate()}` }); }
+      const TIMES = ['12:00', '15:00', '18:00', '19:00', '20:00', '21:00'];
+      let selDate = days[1].iso, selTime = '19:00';
+      const when = h('div', { class: 'pl-when' });
+      const showWhen = () => { when.textContent = prettyDate(selDate, selTime); };
+      function chips(list, cur, onPick, otherLabel, input) {
+        const row = h('div', { class: 'pl-chips' });
+        const all = [];
+        const mark = (btn) => all.forEach((b) => { b.classList.toggle('on', b === btn); b.setAttribute('aria-pressed', String(b === btn)); });
+        list.forEach(([val, label]) => {
+          const b = h('button', { class: 'pl-chip' + (val === cur ? ' on' : ''), type: 'button', text: label, 'aria-pressed': String(val === cur) });
+          b.addEventListener('click', () => { mark(b); input.hidden = true; onPick(val); });
+          all.push(b); row.append(b);
+        });
+        const other = h('button', { class: 'pl-chip', type: 'button', text: otherLabel, 'aria-pressed': 'false' });
+        other.addEventListener('click', () => { mark(other); input.hidden = false; try { input.showPicker && input.showPicker(); } catch (e) { input.focus(); } if (input.value) onPick(input.value); });
+        all.push(other); row.append(other);
+        return row;
+      }
+      const di = h('input', { type: 'date', class: 'pl-input pl-input-full', min: todayISO(), value: selDate, 'aria-label': 'Другая дата', hidden: true });
+      const ti = h('input', { type: 'time', class: 'pl-input pl-input-full', value: selTime, 'aria-label': 'Другое время', hidden: true });
+      di.addEventListener('change', () => { if (di.value) { selDate = di.value; showWhen(); } });
+      ti.addEventListener('change', () => { if (ti.value) { selTime = ti.value; showWhen(); } });
+      const dayRow = chips(days.map((x) => [x.iso, x.label]), selDate, (v) => { selDate = v; showWhen(); }, 'Другая дата', di);
+      const timeRow = chips(TIMES.map((t) => [t, t]), selTime, (v) => { selTime = v; showWhen(); }, 'Другое', ti);
+      showWhen();
       const btn = h('button', { class: 'pl-btn', type: 'button', text: 'Выбрать это время' });
-      btn.addEventListener('click', () => {
-        if (!di.value) { err.textContent = 'Выбери день'; di.focus(); return; }
-        pick({ date: di.value, time: ti.value });
-      });
+      btn.addEventListener('click', () => pick({ date: selDate, time: selTime }));
       return h('div', { class: 'pl-screen pl-center' }, picture(d, '💘'),
         h('h2', { class: 'pl-title', text: fill(d.title) || 'Когда тебе удобно?' }),
         d.text ? h('p', { class: 'pl-text', text: fill(d.text) }) : null,
-        h('div', { class: 'pl-row' }, di, ti), err, btn, chatBtn);
+        h('div', { class: 'pl-pick' }, h('div', { class: 'pl-pick-l', text: 'День' }), dayRow, di,
+          h('div', { class: 'pl-pick-l', text: 'Время' }), timeRow, ti),
+        when, btn, chatBtn);
     }
 
     function choice(i) {
@@ -358,6 +395,7 @@
 
     const api = {
       screens: order,
+      demo(kind) { if (demoFx && demoFx[kind] && stage.querySelector('.pl-yes')) demoFx[kind](); },
       goto(id) { timers.forEach(clearTimeout); timers = []; if (order.includes(id)) show(id); },
       restart() { answers.noClicks = 0; answers.date = null; answers.picks = []; api.goto(order[0]); },
       destroy() { timers.forEach(clearTimeout); stopAnims(); root.innerHTML = ''; root.classList.remove('pl', 'pl-live'); },

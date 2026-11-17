@@ -93,6 +93,9 @@
       });
       root.append(h('div', { class: 'card' }, h('div', { class: 'step-title' }, h('span', { class: 'step-num', text: '2' }), 'Получите ссылку для отправки'),
         h('p', { style: 'color:var(--muted);margin:0 0 16px', text: `Ссылка будет работать ${meta.days || 30} дней. Отправьте её в любой мессенджер.` }),
+        meta.bot ? h('div', { class: 'bot-note' }, h('span', { class: 'bot-note-e', text: '🤖', 'aria-hidden': 'true' }),
+          h('span', {}, h('b', { text: 'После оплаты подключите бота — ' }),
+            (d.telegram && d.telegram.linked) ? `он уже подключён и пришлёт ответ в Telegram: дату, время и выбор.` : `кнопка появится здесь. Бот @${meta.bot} пришлёт ответ в Telegram: дату, время и выбор.`)) : null,
         email, pay, err,
         h('p', { class: 'f-h' }, 'Нажимая кнопку, вы принимаете ', h('a', { href: '/oferta', target: '_blank', text: 'оферту' }), ' и ',
           h('a', { href: '/privacy', target: '_blank', text: 'политику конфиденциальности' }), '.')));

@@ -58,6 +58,15 @@
 .pl-when { font-family: 'Unbounded', sans-serif; font-weight: 800; font-size: 20px; background: var(--card); color: var(--a1); border-radius: 18px; padding: 14px 20px; box-shadow: 0 12px 26px -18px rgba(0, 0, 0, .45); }
 .pl-when::first-letter { text-transform: uppercase; }
 
+/* выбор дня и времени */
+.pl-pick { width: 100%; display: grid; gap: 8px; }
+.pl-pick-l { font-weight: 800; font-size: 13px; color: var(--muted); text-align: left; margin-top: 2px; }
+.pl-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.pl-chip { border: 1.5px solid var(--line); background: var(--card); color: var(--ink); border-radius: 999px; padding: 9px 13px; font: 700 14px 'Manrope', sans-serif; cursor: pointer; white-space: nowrap; }
+.pl-chip.on { color: #fff; border-color: transparent; background: linear-gradient(100deg, var(--a1), var(--a2)); }
+.pl-input-full { width: 100%; flex: none; }
+.pl-input[hidden] { display: none; }
+
 /* эффекты кнопок */
 .pl-fx { position: absolute; inset: 0; pointer-events: none; z-index: 25; overflow: hidden; }
 .pl-fx span { position: absolute; transform: translate(-50%, -50%); }
@@ -260,3 +269,14 @@ textarea.inp { resize: vertical; min-height: 84px; }
   .dot { width: 8px; height: 8px; }
   .ed-top { gap: 8px; padding: 10px 12px; }
 }
+
+@media (max-width: 900px) {
+  .pv-phone.mini .pl-chip { padding: 6px 9px; font-size: 11px; }
+  .pv-phone.mini .pl-pick { gap: 5px; }
+  .pv-phone.mini .pl-when { font-size: 13px; padding: 8px 12px; }
+  .pv-phone.mini .pl-pick-l { font-size: 11px; }
+}
+
+/* «после оплаты ответы придут в Telegram» */
+.bot-note { display: flex; gap: 10px; align-items: flex-start; background: #eaf4ff; border-radius: 14px; padding: 12px 14px; margin: 12px 0 14px; font-size: 14px; line-height: 1.45; color: #1d3a5c; }
+.bot-note-e { font-size: 20px; line-height: 1; }

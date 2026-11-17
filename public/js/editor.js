@@ -120,11 +120,15 @@
     ['honest', '🙂', 'Честный ответ', 'можно отказаться'],
   ];
   const YES_FX = [['burst', '💥', 'Взрыв сердечек', ''], ['rain', '💕', 'Дождь из сердечек', ''], ['none', '➡️', 'Без анимации', '']];
-  function optionGrid(label, path, list, def) {
+  // после выбора показать эффект в превью (и большом, и мини на телефоне)
+  function demoSoon(kind) {
+    setTimeout(() => { [player, inlinePlayer].forEach((pl) => { if (pl && pl.demo) pl.demo(kind); }); }, 450);
+  }
+  function optionGrid(label, path, list, def, demo) {
     const cur = get(path) || def;
     return h('div', { class: 'f' }, h('span', { class: 'f-l', text: label }),
       h('div', { class: 'opts' }, list.map(([val, e, title, sub]) => h('button', {
-        type: 'button', class: 'opt' + (cur === val ? ' on' : ''), 'aria-pressed': String(cur === val), on: { click: () => set(path, val, true) },
+        type: 'button', class: 'opt' + (cur === val ? ' on' : ''), 'aria-pressed': String(cur === val), on: { click: () => { set(path, val, true); if (demo) demoSoon(demo); } },
       }, h('span', { class: 'opt-e', text: e, 'aria-hidden': 'true' }), title, sub ? h('small', { text: sub }) : null))));
   }
   const panelHead = (title, sub) => [h('h2', { class: 'p-title', text: title }), sub ? h('p', { class: 'p-sub', text: sub }) : null];
@@ -210,12 +214,12 @@
         textInput('ask.yes', 'Текст кнопки «Да»', { max: 30 }),
         emojiPicker('Стикер', cfg.ask.sticker, (e) => set('ask.sticker', e, true)),
         photoField('photo', 'Фото (необязательно) — будет вместо стикера'),
-        optionGrid('Что делает кнопка «Нет»', 'ask.noMode', NO_MODES, 'run'),
+        optionGrid('Что делает кнопка «Нет»', 'ask.noMode', NO_MODES, 'run', 'no'),
         ['run', 'kiss'].includes(cfg.ask.noMode || 'run')
           ? textArea('ask.noLinesText', 'Фразы на кнопке «Нет» (по одной в строке)', { max: 400, rows: 4, ph: cfg.ask.noMode === 'kiss' ? 'Нет\nНу пожалуйста 🥺\nПодумай ещё разок 💋' : 'Нет\nТочно?\nПодумай ещё', hint: 'Пусто — будут стандартные' })
           : null,
         cfg.ask.noMode === 'honest' ? h('p', { class: 'f-h', text: 'Получатель сможет ответить «нет» — вы увидите это на странице приглашения.' }) : null,
-        optionGrid('Что делает кнопка «Да»', 'ask.yesFx', YES_FX, 'burst')];
+        optionGrid('Что делает кнопка «Да»', 'ask.yesFx', YES_FX, 'burst', 'yes')];
     },
     confirm() {
       const c = cfg.confirm;
@@ -299,13 +303,10 @@
       return [...panelHead('Всё готово! 💌', 'Пройдите приглашение в превью целиком — так его увидит получатель.'),
         h('div', { class: 'sum-card' }, h('b', { text: 'Что вы получите' }),
           h('ul', { class: 'gets' }, gets.map((t) => h('li', { text: t })))),
-        meta.bot ? h('div', { class: 'tg-how' },
-          h('b', { text: 'Как получать ответ в Telegram' }),
-          h('ol', {}, h('li', { text: 'Создайте приглашение.' }),
-            h('li', { text: 'На странице приглашения нажмите «Получать ответ в Telegram».' }),
-            h('li', {}, 'Откроется бот ', h('b', { text: '@' + meta.bot }), ' — нажмите «Запустить» (Start).')),
-          h('p', { class: 'f-h', text: 'Готово: бот пришлёт сообщение, когда приглашение откроют и когда ответят — с датой и выбором.' })) : null,
         h('p', { class: 'f-h', text: meta.pay ? `Дальше — оплата ${meta.price} ₽, сразу после неё вы получите ссылку. Собрать и посмотреть — бесплатно.` : 'Дальше вы получите ссылку для отправки.' }),
+        meta.bot ? h('div', { class: 'bot-note' }, h('span', { class: 'bot-note-e', text: '🤖', 'aria-hidden': 'true' }),
+          h('span', {}, h('b', { text: 'После оплаты ответы придут в Telegram. ' }),
+            `Бот @${meta.bot} пришлёт, когда приглашение откроют, а потом — ответ: дату и время встречи, выбранные места и сколько раз пытались нажать «Нет».`)) : null,
         err ? h('div', { class: 'error', text: err }) : null,
         h('button', { type: 'button', class: 'btn', id: 'create', text: 'Создать приглашение 💌', on: { click: submit } }),
         h('div', { class: 'error', id: 'create-err' }),
