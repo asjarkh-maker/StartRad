@@ -76,6 +76,29 @@ const s = (v, max) => (typeof v === 'string' ? v.replace(/[\u0000-\u0008\u000B\u
 const arr = (v, max) => (Array.isArray(v) ? v.slice(0, max) : []);
 const obj = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
 
+const GATES = ['envelope', 'button', 'none', 'code', 'scratch', 'timer'];
+function normalizeGate(g) {
+  const type = GATES.includes(g.type) ? g.type : 'envelope';
+  const out = { type, text: s(g.text, 80) };
+  if (type === 'code') {
+    const code = String(g.code || '').replace(/\D/g, '').slice(0, 6);
+    if (code.length < 4) throw Object.assign(new Error('Код для открытия — от 4 до 6 цифр'), { status: 400 });
+    Object.assign(out, { code, hint: s(g.hint, 80) });
+  }
+  if (type === 'timer') {
+    const at = Date.parse(g.at || '');
+    if (!at) throw Object.assign(new Error('Укажите, когда откроется приглашение'), { status: 400 });
+    out.at = new Date(at).toISOString();
+  }
+  return out;
+}
+// получателю код не показываем — только его хеш для проверки
+function publicConfig(cfg) {
+  if (!cfg.gate || cfg.gate.type !== 'code') return cfg;
+  const { code, ...gate } = cfg.gate;
+  return { ...cfg, gate: { ...gate, codeLen: String(code || '').length || 4, codeHash: crypto.createHash('sha256').update(String(code || '')).digest('hex') } };
+}
+
 function normalizeConfig(raw) {
   const c = obj(raw), gate = obj(c.gate), ask = obj(c.ask), confirm = obj(c.confirm),
     date = obj(c.date), fin = obj(c.final);
@@ -84,7 +107,7 @@ function normalizeConfig(raw) {
     fromName: s(c.fromName, 40),
     theme: THEMES.includes(c.theme) ? c.theme : 'pink',
     photo: uploaded(c.photo, ['jpg', 'png', 'webp', 'gif']),
-    gate: { type: gate.type === 'button' ? 'button' : 'envelope', text: s(gate.text, 80) },
+    gate: normalizeGate(gate),
     ask: {
       title: s(ask.title, 140) || 'Пойдёшь со мной на свидание?',
       text: s(ask.text, 500),
@@ -355,7 +378,7 @@ app.get('/api/i/:slug', (req, res) => {
   if (!inv) return res.status(404).json({ error: 'Приглашение не найдено' });
   if (!inv.paid) return res.status(402).json({ error: 'Приглашение ещё не активировано' });
   if (expired(inv)) return res.status(410).json({ error: 'Срок действия приглашения истёк' });
-  res.json({ config: inv.config, answered: Boolean(inv.answer && (inv.answer.finishedAt || inv.answer.declinedAt)), declined: Boolean(inv.answer && inv.answer.declinedAt) });
+  res.json({ config: publicConfig(inv.config), answered: Boolean(inv.answer && (inv.answer.finishedAt || inv.answer.declinedAt)), declined: Boolean(inv.answer && inv.answer.declinedAt) });
 });
 // ---- ответы получателя → сообщения создателю в Telegram ----
 function answerLines(inv) {
@@ -553,6 +576,7 @@ app.use((req, res) => sendHtml(res, '404.html', 404));
 app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
   if (err && err.type === 'entity.too.large') return res.status(413).json({ error: 'Слишком большой файл' });
   if (err instanceof SyntaxError) return res.status(400).json({ error: 'Некорректные данные' });
+  if (err && err.status === 400) return res.status(400).json({ error: err.message });
   console.error(err);
   res.status(500).json({ error: 'Ошибка сервера' });
 });

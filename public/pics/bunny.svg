@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 180">
+<style>
+.l{stroke:#5a4050;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.hop{animation:hop 1.8s cubic-bezier(.3,0,.4,1) infinite;transform-box:fill-box;transform-origin:50% 100%}
+.earL{animation:earL 1.8s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 100%}
+.earR{animation:earR 1.8s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 100%}
+.sh{animation:sh 1.8s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+.f{animation:f 3.2s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+.f2{animation-delay:1.6s}
+@keyframes hop{0%,100%{transform:translateY(0) scale(1.03,.97)}40%{transform:translateY(-14px) scale(.98,1.03)}70%{transform:translateY(0) scale(1,1)}}
+@keyframes earL{50%{transform:rotate(-10deg)}}
+@keyframes earR{50%{transform:rotate(12deg)}}
+@keyframes sh{0%,100%{transform:scale(1);opacity:.06}40%{transform:scale(.75);opacity:.03}}
+@keyframes f{0%{transform:translate(0,0) rotate(0);opacity:0}25%{opacity:1}100%{transform:translate(-10px,-50px) rotate(-20deg);opacity:0}}
+</style>
+<ellipse class="sh" cx="120" cy="170" rx="56" ry="7" fill="#000"/>
+<g class="hop">
+ <g class="earL"><path class="l" d="M98 66 c-14 -30 -10 -58 2 -58 c12 0 14 30 10 58z" fill="#fff"/><path d="M101 58 c-6 -20 -4 -40 1 -40 c5 0 6 22 4 40z" fill="#ffc2d1"/></g>
+ <g class="earR"><path class="l" d="M130 66 c-2 -28 2 -58 14 -56 c12 2 6 32 -4 58z" fill="#fff"/><path d="M134 58 c0 -20 3 -38 8 -38 c5 1 1 22 -4 40z" fill="#ffc2d1"/></g>
+ <ellipse class="l" cx="120" cy="136" rx="40" ry="32" fill="#fff"/>
+ <circle class="l" cx="120" cy="92" r="36" fill="#fff"/>
+ <path class="l" d="M104 92 q5 -6 10 0 M126 92 q5 -6 10 0" fill="none"/>
+ <path d="M117 100 l3 3 l3 -3z" fill="#ff8fa3"/>
+ <path class="l" d="M120 103 v4 M114 108 q6 4 12 0" fill="none"/>
+ <circle cx="98" cy="104" r="7" fill="#ff8fa3" opacity=".6"/><circle cx="142" cy="104" r="7" fill="#ff8fa3" opacity=".6"/>
+ <path class="l" d="M98 132 q-8 10 4 14 M142 132 q8 10 -4 14" fill="none"/>
+ <path d="M112 128 c-3 -6 -12 -3 -9 3 l9 9 l9 -9 c3 -6 -6 -9 -9 -3z" fill="#ff4d6d" class="l"/>
+</g>
+<g class="f"><circle cx="62" cy="110" r="7" fill="#ffb3c1"/><circle cx="56" cy="104" r="7" fill="#ffb3c1"/><circle cx="62" cy="98" r="7" fill="#ffb3c1"/><circle cx="68" cy="104" r="7" fill="#ffb3c1"/><circle cx="62" cy="104" r="4" fill="#ffd166"/></g>
+<g class="f f2"><circle cx="186" cy="96" r="6" fill="#cdb4ff"/><circle cx="181" cy="91" r="6" fill="#cdb4ff"/><circle cx="186" cy="86" r="6" fill="#cdb4ff"/><circle cx="191" cy="91" r="6" fill="#cdb4ff"/><circle cx="186" cy="91" r="3.4" fill="#ffd166"/></g>
+</svg>

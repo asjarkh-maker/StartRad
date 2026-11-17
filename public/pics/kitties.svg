@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 180">
+<style>
+.l{stroke:#5b3a3a;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.bob{animation:bob 2.4s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 100%}
+.tilt{animation:tilt 3s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 90%}
+.h{animation:up 2.8s ease-in infinite;transform-box:fill-box;transform-origin:center;opacity:0}
+.h2{animation-delay:1.4s}
+.tail{animation:wag 1.6s ease-in-out infinite;transform-box:fill-box;transform-origin:0% 100%}
+@keyframes bob{50%{transform:translateY(-4px)}}
+@keyframes tilt{0%,100%{transform:rotate(0)}50%{transform:rotate(6deg)}}
+@keyframes up{0%{opacity:0;transform:translateY(0) scale(.6)}20%{opacity:1}100%{opacity:0;transform:translateY(-60px) scale(1.1)}}
+@keyframes wag{50%{transform:rotate(-14deg)}}
+</style>
+<ellipse cx="120" cy="168" rx="92" ry="8" fill="#000" opacity=".06"/>
+<g class="bob">
+ <path class="l tail" d="M46 150 q-24 -6 -18 -34" fill="none" stroke="#f0a050" stroke-width="9"/>
+ <ellipse class="l" cx="74" cy="138" rx="34" ry="30" fill="#f7b267"/>
+ <path class="l" d="M50 64 l6 -26 l18 16 z M98 64 l-6 -26 l-18 16 z" fill="#f7b267"/>
+ <path d="M54 58 l3 -12 l8 8 z M94 58 l-3 -12 l-8 8 z" fill="#ffd0c8"/>
+ <circle class="l" cx="74" cy="84" r="32" fill="#f7b267"/>
+ <path d="M64 54 q10 6 20 0 M60 62 q14 7 28 0" stroke="#e08a3a" stroke-width="4" fill="none" stroke-linecap="round"/>
+ <path class="l" d="M60 86 q5 -6 10 0 M80 86 q5 -6 10 0" fill="none"/>
+ <path class="l" d="M71 96 q3 3 6 0" fill="none"/>
+ <circle cx="56" cy="96" r="6" fill="#ff8fa3" opacity=".6"/><circle cx="94" cy="96" r="6" fill="#ff8fa3" opacity=".6"/>
+ <path class="l" d="M98 128 q14 -4 22 -14" fill="none" stroke-width="10" stroke="#f7b267"/>
+ <path class="l" d="M98 128 q14 -4 22 -14" fill="none"/>
+ <path d="M128 100 c-6 -10 -20 -4 -14 6 l14 14 l14 -14 c6 -10 -8 -16 -14 -6z" fill="#ff4d6d" class="l"/>
+</g>
+<g class="tilt">
+ <ellipse class="l" cx="170" cy="140" rx="32" ry="28" fill="#fff"/>
+ <path class="l" d="M146 70 l4 -24 l18 14 z M194 70 l-4 -24 l-18 14 z" fill="#fff"/>
+ <path d="M150 64 l2 -10 l8 7 z M190 64 l-2 -10 l-8 7 z" fill="#ffd0c8"/>
+ <circle class="l" cx="170" cy="90" r="30" fill="#fff"/>
+ <circle cx="159" cy="90" r="3.6" fill="#5b3a3a"/><circle cx="181" cy="90" r="3.6" fill="#5b3a3a"/>
+ <circle cx="160.2" cy="88.8" r="1.2" fill="#fff"/><circle cx="182.2" cy="88.8" r="1.2" fill="#fff"/>
+ <path class="l" d="M166 100 q4 4 8 0" fill="none"/>
+ <circle cx="152" cy="100" r="6" fill="#ff8fa3" opacity=".75"/><circle cx="188" cy="100" r="6" fill="#ff8fa3" opacity=".75"/>
+ <path class="l" d="M150 128 q-4 -10 6 -14 M190 128 q4 -10 -6 -14" fill="none"/>
+</g>
+<path class="h" d="M120 70 c-4 -7 -14 -3 -10 4 l10 10 l10 -10 c4 -7 -6 -11 -10 -4z" fill="#ff758f"/>
+<path class="h h2" d="M140 60 c-3 -5 -10 -2 -7 3 l7 7 l7 -7 c3 -5 -4 -8 -7 -3z" fill="#ffb3c1"/>
+</svg>

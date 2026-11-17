@@ -46,7 +46,7 @@
     return time ? `${txt}, ${time}` : txt;
   }
   function screensOf(cfg) {
-    const list = ['gate', 'ask'];
+    const list = cfg.gate && cfg.gate.type === 'none' ? ['ask'] : ['gate', 'ask'];
     if (!cfg.confirm || cfg.confirm.enabled !== false) list.push('confirm');
     // сначала «куда», потом «когда» — время зависит от места
     (cfg.choices || []).forEach((_, i) => list.push('choice' + i));
@@ -62,7 +62,7 @@
     const answers = { noClicks: 0, date: null, picks: [] };
     const seed = () => { answers.noClicks = 0; answers.date = opts.demo ? opts.demo.date || null : null; answers.picks = opts.demo ? (opts.demo.picks || []).slice() : []; };
     seed();
-    let cur = -1, timers = [];
+    let cur = -1, timers = [], opened = false;
 
     root.innerHTML = '';
     root.classList.add('pl');
@@ -80,6 +80,7 @@
     let demoFx = null;
     function sticker(e, cls = '') {
       if (!e) return null;
+      if (/^pic:[a-z]+$/.test(e)) return h('div', { class: 'pl-sticker pl-pic ' + cls, 'aria-hidden': 'true' }, h('img', { src: `/pics/${e.slice(4)}.svg`, alt: '' }));
       const el = h('div', { class: 'pl-sticker ' + cls, text: e, 'aria-hidden': 'true' });
       if (window.lottie) {
         const code = stCode(e);
@@ -114,16 +115,20 @@
     function gate() {
       const g = cfg.gate || {};
       const wrap = h('div', { class: 'pl-screen pl-center' });
+      const open = () => { emit('open'); opened = true; next(); };
+      if (g.type === 'code') return gateCode(g, wrap, open);
+      if (g.type === 'scratch') return gateScratch(g, wrap, open);
+      if (g.type === 'timer') return gateTimer(g, wrap, open);
       if (g.type === 'button') {
         wrap.append(sticker('💌', 'big'), h('h2', { class: 'pl-title', text: fill(g.text) || `${names()}, тебе письмо` }),
-          h('button', { class: 'pl-btn', type: 'button', text: 'Открыть', on: { click: () => { emit('open'); next(); } } }));
+          h('button', { class: 'pl-btn', type: 'button', text: 'Открыть', on: { click: open } }));
         return wrap;
       }
       const env = h('div', { class: 'pl-env', role: 'button', tabindex: '0', 'aria-label': 'Открыть конверт' },
         h('div', { class: 'pl-env-body' }), h('div', { class: 'pl-env-flap' }), h('div', { class: 'pl-env-seal', html: HEART }));
       const go = () => {
         if (env.classList.contains('open')) return;
-        env.classList.add('open'); emit('open');
+        env.classList.add('open'); emit('open'); opened = true;
         later(next, 800);
       };
       env.addEventListener('click', go);
@@ -132,7 +137,90 @@
       return wrap;
     }
 
+    // код из цифр: в превью код известен, у получателя — только его хеш
+    async function codeOk(g, val) {
+      if (g.code) return val === g.code;
+      if (!g.codeHash) return true;
+      try {
+        const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(val));
+        return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('') === g.codeHash;
+      } catch (e) { return true; }
+    }
+    function gateCode(g, wrap, open) {
+      const len = g.code ? g.code.length : g.codeLen || 4;
+      const inp = h('input', { class: 'pl-input pl-code', type: 'text', inputmode: 'numeric', autocomplete: 'off', maxlength: len, placeholder: '•'.repeat(len), 'aria-label': 'Код' });
+      const msg = h('p', { class: 'pl-hint pl-code-msg', role: 'status' });
+      const check = async () => {
+        inp.value = inp.value.replace(/\D/g, '').slice(0, len);
+        if (inp.value.length < len) { msg.textContent = ''; return; }
+        if (await codeOk(g, inp.value)) { inp.classList.add('ok'); msg.textContent = 'Верно! 💖'; later(open, 500); }
+        else { inp.classList.remove('shake'); void inp.offsetWidth; inp.classList.add('shake'); msg.textContent = 'Не тот код — попробуй ещё 🙈'; inp.select(); }
+      };
+      inp.addEventListener('input', check);
+      wrap.append(sticker('🔐', 'big'), h('h2', { class: 'pl-title', text: fill(g.text) || `${names()}, введи код` }),
+        ...(g.hint ? [h('p', { class: 'pl-text', text: 'Подсказка: ' + fill(g.hint) })] : []), inp, msg);
+      return wrap;
+    }
+    // стереть фон пальцем
+    function gateScratch(g, wrap, open) {
+      const box = h('div', { class: 'pl-scratch' }, h('div', { class: 'pl-scratch-under' }, sticker('💌', 'big'), h('b', { text: 'Тебе приглашение!' })));
+      const cv = h('canvas', { class: 'pl-scratch-cv', 'aria-label': 'Сотри, чтобы открыть', role: 'button', tabindex: '0' });
+      box.append(cv);
+      let ctx, W = 0, H = 0, done = false, moves = 0;
+      const paint = () => {
+        const r = box.getBoundingClientRect(); if (!r.width) return;
+        const k = window.devicePixelRatio || 1; W = cv.width = Math.round(r.width * k); H = cv.height = Math.round(r.height * k);
+        ctx = cv.getContext('2d');
+        const st = getComputedStyle(root), gr = ctx.createLinearGradient(0, 0, W, H);
+        gr.addColorStop(0, st.getPropertyValue('--a2').trim() || '#ff8fab'); gr.addColorStop(1, st.getPropertyValue('--a1').trim() || '#ff4d6d');
+        ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.font = `800 ${Math.round(16 * k)}px Manrope, sans-serif`; ctx.textAlign = 'center';
+        ctx.fillText('Сотри меня ✨', W / 2, H / 2 + 6 * k);
+        ctx.globalCompositeOperation = 'destination-out'; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = 34 * k;
+      };
+      later(paint, 30);
+      const cleared = () => { const d = ctx.getImageData(0, 0, W, H).data; let n = 0, all = 0; for (let i = 3; i < d.length; i += 64) { all++; if (d[i] < 40) n++; } return n / all; };
+      const finish = () => { if (done) return; done = true; cv.classList.add('gone'); later(open, 700); };
+      let last = null;
+      const pt = (e) => { const r = cv.getBoundingClientRect(), k = W / r.width; return [(e.clientX - r.left) * k, (e.clientY - r.top) * k]; };
+      cv.addEventListener('pointerdown', (e) => { if (!ctx) paint(); last = pt(e); cv.setPointerCapture(e.pointerId); ctx.beginPath(); ctx.arc(last[0], last[1], 17 * (W / cv.getBoundingClientRect().width), 0, 7); ctx.fill(); });
+      cv.addEventListener('pointermove', (e) => {
+        if (!last || done) return; const p = pt(e);
+        ctx.beginPath(); ctx.moveTo(last[0], last[1]); ctx.lineTo(p[0], p[1]); ctx.stroke(); last = p;
+        if (++moves % 8 === 0 && cleared() > 0.45) finish();
+      });
+      const up = () => { last = null; if (ctx && !done && cleared() > 0.45) finish(); };
+      cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+      cv.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); finish(); } });
+      wrap.append(h('h2', { class: 'pl-title', text: fill(g.text) || `${names()}, сотри, чтобы открыть` }), box);
+      return wrap;
+    }
+    // откроется в выбранное время
+    function gateTimer(g, wrap, open) {
+      const at = Date.parse(g.at || '') || 0;
+      const clock = h('div', { class: 'pl-clock', 'aria-live': 'polite' });
+      const btn = h('button', { class: 'pl-btn', type: 'button', text: 'Открыть', on: { click: open } });
+      const sub = h('p', { class: 'pl-text' });
+      const when = at ? new Date(at).toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : '';
+      const tick = () => {
+        if (cur >= 0 && order[cur] !== 'gate') return;
+        const left = at - Date.now();
+        if (left <= 0) { clock.hidden = true; sub.textContent = 'Время пришло 💖'; btn.hidden = false; return; }
+        btn.hidden = true;
+        const d = Math.floor(left / 864e5), hh = Math.floor(left / 36e5) % 24, mm = Math.floor(left / 6e4) % 60, ss = Math.floor(left / 1e3) % 60;
+        const two = (n) => String(n).padStart(2, '0');
+        clock.textContent = (d ? `${d} д ` : '') + `${two(hh)}:${two(mm)}:${two(ss)}`;
+        sub.textContent = `Откроется ${when}`;
+        later(tick, 1000);
+      };
+      tick();
+      wrap.append(sticker('⏰', 'big'), h('h2', { class: 'pl-title', text: fill(g.text) || `${names()}, для тебя кое-что есть` }), clock, sub, btn);
+      if (!live && at > Date.now()) wrap.append(h('button', { class: 'pl-link', type: 'button', text: 'Открыть сейчас (только в превью)', on: { click: open } }));
+      return wrap;
+    }
+
     function ask() {
+      if (!opened && cfg.gate && cfg.gate.type === 'none') { opened = true; emit('open'); }
       const a = cfg.ask || {};
       const wrap = h('div', { class: 'pl-screen pl-center' });
       const yes = h('button', { class: 'pl-btn pl-yes', type: 'button', text: a.yes || 'Да 💖' });

@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 180">
+<style>
+.l{stroke:#6b2d3c;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.a{animation:a 2.2s ease-in-out infinite;transform-box:fill-box;transform-origin:100% 100%}
+.b{animation:b 2.2s ease-in-out infinite;transform-box:fill-box;transform-origin:0% 100%}
+.m{animation:m 2.2s ease-in-out infinite;transform-box:fill-box;transform-origin:center;opacity:0}
+@keyframes a{0%,100%{transform:translateX(-6px) rotate(-4deg)}50%{transform:translateX(2px) rotate(4deg)}}
+@keyframes b{0%,100%{transform:translateX(6px) rotate(4deg)}50%{transform:translateX(-2px) rotate(-4deg)}}
+@keyframes m{0%,30%{opacity:0;transform:translateY(6px) scale(.5)}55%{opacity:1;transform:translateY(-6px) scale(1)}90%,100%{opacity:0;transform:translateY(-22px) scale(1.1)}}
+</style>
+<ellipse cx="120" cy="168" rx="84" ry="7" fill="#000" opacity=".06"/>
+<g class="a">
+ <path class="l" d="M92 160 c-40 -30 -64 -56 -64 -80 c0 -22 16 -36 34 -36 c14 0 24 8 30 18 c6 -10 16 -18 30 -18 c18 0 30 14 30 34 c0 24 -24 52 -60 82z" fill="#ff8fab"/>
+ <path class="l" d="M64 92 q5 -6 10 0 M90 92 q5 -6 10 0" fill="none"/>
+ <path class="l" d="M78 104 q4 4 8 0" fill="none"/>
+ <circle cx="58" cy="104" r="6" fill="#fff" opacity=".45"/><circle cx="106" cy="104" r="6" fill="#fff" opacity=".45"/>
+ <path class="l" d="M122 112 q14 -2 18 10" fill="none"/>
+</g>
+<g class="b">
+ <path class="l" d="M148 160 c-30 -26 -50 -50 -50 -72 c0 -18 12 -30 28 -30 c12 0 20 6 24 14 c4 -8 12 -14 24 -14 c16 0 28 12 28 30 c0 22 -20 46 -54 72z" fill="#ffc2d1"/>
+ <circle cx="136" cy="96" r="3.6" fill="#6b2d3c"/><circle cx="162" cy="96" r="3.6" fill="#6b2d3c"/>
+ <circle cx="137.2" cy="94.8" r="1.2" fill="#fff"/><circle cx="163.2" cy="94.8" r="1.2" fill="#fff"/>
+ <path class="l" d="M145 106 q4 4 8 0" fill="none"/>
+ <circle cx="128" cy="108" r="6" fill="#ff8fa3" opacity=".7"/><circle cx="170" cy="108" r="6" fill="#ff8fa3" opacity=".7"/>
+ <path class="l" d="M110 118 q-10 6 -10 14" fill="none"/>
+</g>
+<path class="m" d="M120 40 c-4 -7 -14 -3 -10 4 l10 10 l10 -10 c4 -7 -6 -11 -10 -4z" fill="#ff4d6d"/>
+</svg>

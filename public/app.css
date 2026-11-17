@@ -285,3 +285,29 @@ textarea.inp { resize: vertical; min-height: 84px; }
 .chips .chip.on { border-color: var(--pink); background: #fff0f5; }
 .final-chips { margin: -6px 0 16px; }
 [hidden] { display: none !important; }
+/* картинки-иллюстрации */
+.pl-sticker.pl-pic { animation: none; width: 200px; max-width: 70%; align-self: center; }
+.pl-sticker.pl-pic img { display: block; width: 100%; height: auto; }
+.pv-phone.mini .pl-sticker.pl-pic { width: 130px; }
+/* код из цифр */
+.pl-code { flex: none; align-self: center; width: 190px; text-align: center; font: 800 28px 'Manrope', sans-serif; letter-spacing: 10px; padding: 12px 10px 12px 20px; }
+.pl-code.ok { border-color: #2fb36d; }
+.pl-code.shake { animation: pl-shake .4s; border-color: var(--a1); }
+@keyframes pl-shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+.pl-code-msg { min-height: 20px; }
+/* стереть фон */
+.pl-scratch { position: relative; align-self: center; width: 240px; max-width: 100%; height: 170px; border-radius: 22px; overflow: hidden; background: var(--card); box-shadow: 0 16px 30px -18px var(--a1); }
+.pl-scratch-under { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; font-size: 18px; color: var(--ink); }
+.pl-scratch-cv { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: grab; transition: opacity .6s; }
+.pl-scratch-cv.gone { opacity: 0; pointer-events: none; }
+/* таймер */
+.pl-clock { font: 800 40px 'Manrope', sans-serif; color: var(--a1); font-variant-numeric: tabular-nums; letter-spacing: 1px; }
+button.pl-link { background: none; border: 0; cursor: pointer; font: 700 14px 'Manrope', sans-serif; text-decoration: underline; padding: 6px; }
+.gmini-code { font: 800 11px 'Manrope', sans-serif; color: var(--a1); background: var(--card); border-radius: 6px; padding: 3px 8px; letter-spacing: 1px; }
+.gmini-scratch { width: 62%; aspect-ratio: 3 / 2; border-radius: 8px; display: grid; place-items: center; color: #fff; font: 800 10px 'Manrope', sans-serif;
+  background: repeating-linear-gradient(135deg, rgba(255,255,255,.18) 0 6px, transparent 6px 12px), linear-gradient(160deg, var(--a2), var(--a1)); }
+.pics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
+.pic { border: 2px solid var(--line); background: #fff; border-radius: 14px; padding: 4px; cursor: pointer; transition: border-color .15s, transform .15s; }
+.pic:hover { transform: translateY(-2px); }
+.pic.on { border-color: var(--pink); box-shadow: 0 0 0 3px #ffe0ea; }
+.pic img { display: block; width: 100%; height: auto; }

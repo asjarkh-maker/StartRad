@@ -25,6 +25,7 @@
     ['lilac', 'Сирень', '#8b5cf6'], ['night', 'Вечер', '#2b1830'],
   ];
   const STICKERS = ['🥺', '🥰', '😍', '😳', '🤭', '🙈', '😘', '😻', '🥳', '😊', '🤗', '😎', '🤩', '😇', '💘', '💖', '💝', '💞', '💕', '💌', '💋', '🌹', '💐', '🌷', '🎉', '🎁', '⏰', '🍷', '🥂', '✨', '🔥', '🦋', '💃', '🐱', '🐻', '🦄', '🍿', '🎬', '☕', '🎂', '🌈'];
+  const PICS = [['pic:kitties', 'Котики'], ['pic:bear', 'Мишка с сердцем'], ['pic:bunny', 'Зайка'], ['pic:hug', 'Обнимашки']];
   const PRESETS = {
     'Куда пойдём': { title: 'Куда пойдём?', items: [['Парк', '🌳'], ['Ресторан', '🍽️'], ['Набережная', '🌅'], ['Уютный вечер дома', '🏠'], ['Кофейня', '☕'], ['Кино', '🎬']] },
     'Что поедим': { title: 'Что будем есть?', items: [['Пицца', '🍕'], ['Суши', '🍣'], ['Паста', '🍝'], ['Бургеры', '🍔'], ['Десерты', '🍰'], ['Стейк', '🥩']] },
@@ -34,11 +35,11 @@
   const defaults = () => ({
     toName: '', fromName: '', theme: 'pink', photo: '',
     gate: { type: 'envelope', text: '' },
-    ask: { title: 'Пойдёшь со мной на свидание?', text: '', sticker: '🥺', yes: 'Да 💖', noLines: [], noMode: 'run', yesFx: 'burst' },
-    confirm: { enabled: true, picture: 'sticker', photo: '', title: 'Ура! Лучший ответ на свете 💖', text: '', sticker: '🥰', button: 'Дальше' },
-    date: { enabled: true, mode: 'ask', fixedDate: '', fixedTime: '', chat: true, picture: 'sticker', photo: '', title: 'Когда тебе удобно?', text: 'Выбери день и время — я подстроюсь.', sticker: '💘' },
+    ask: { title: 'Пойдёшь со мной на свидание?', text: '', sticker: 'pic:kitties', yes: 'Да 💖', noLines: [], noMode: 'run', yesFx: 'burst' },
+    confirm: { enabled: true, picture: 'sticker', photo: '', title: 'Ура! Лучший ответ на свете 💖', text: '', sticker: 'pic:hug', button: 'Дальше' },
+    date: { enabled: true, mode: 'ask', fixedDate: '', fixedTime: '', chat: true, picture: 'sticker', photo: '', title: 'Когда тебе удобно?', text: 'Выбери день и время — я подстроюсь.', sticker: 'pic:bear' },
     choices: [{ title: 'Куда пойдём?', multi: false, items: [{ name: 'Парк', emoji: '🌳' }, { name: 'Ресторан', emoji: '🍽️' }, { name: 'Набережная', emoji: '🌅' }, { name: 'Уютный вечер дома', emoji: '🏠' }, { name: 'Кофейня', emoji: '☕' }, { name: 'Кино', emoji: '🎬' }] }],
-    final: { title: 'Ура, встречаемся!', text: 'Жду нашей встречи 💞', sticker: '🥳' },
+    final: { title: 'Ура, встречаемся!', text: 'Жду нашей встречи 💞', sticker: 'pic:bunny' },
   });
 
   const STEPS = [
@@ -109,11 +110,19 @@
     return h('div', { class: 'tabs' }, list.map(([val, label]) => h('button', { type: 'button', class: 'tab' + (cur === val ? ' on' : ''), text: label, on: { click: () => onPick(val) } })));
   }
   function emojiPicker(label, cur, onPick) {
-    const own = h('input', { type: 'text', class: 'inp inp-emoji', maxlength: 8, placeholder: 'своё', value: STICKERS.includes(cur) ? '' : cur || '' });
+    const own = h('input', { type: 'text', class: 'inp inp-emoji', maxlength: 8, placeholder: 'своё', value: STICKERS.includes(cur) || PICS.some(([id]) => id === cur) ? '' : cur || '' });
     own.addEventListener('input', () => onPick(own.value.trim()));
     return h('div', { class: 'f' }, label ? h('span', { class: 'f-l', text: label }) : null,
+      h('div', { class: 'pics' }, PICS.map(([id, name]) => h('button', { type: 'button', class: 'pic' + (cur === id ? ' on' : ''), 'aria-label': name, 'aria-pressed': String(cur === id), on: { click: () => onPick(id) } },
+        h('img', { src: `/pics/${id.slice(4)}.svg`, alt: '' })))),
       h('div', { class: 'emojis' }, STICKERS.map((e) => h('button', { type: 'button', class: 'emo' + (cur === e ? ' on' : ''), text: e, 'aria-label': e, on: { click: () => onPick(e) } })), own));
   }
+  const GATES = [
+    ['none', 'Сразу к приглашению', 'без лишних шагов'], ['envelope', 'Конверт', 'нажать, чтобы открыть'],
+    ['button', 'Кнопка «Открыть»', 'просто и быстро'], ['code', 'Код из цифр', 'открыть по секретному коду'],
+    ['scratch', 'Стереть фон', 'стереть пальцем, как лотерею'], ['timer', 'В выбранное время', 'с обратным отсчётом'],
+  ];
+  const GATE_PH = { envelope: 'Тебе письмо. Нажми на конверт 💌', button: 'Тебе письмо 💌', code: 'Введи код', scratch: 'Сотри, чтобы открыть', timer: 'Для тебя кое-что есть' };
   const FINAL_TITLES = ['Ура, встречаемся!', 'Договорились! 🤝', 'Жду с нетерпением!', 'Это будет чудесно ✨', 'Это свидание!'];
   const NO_MODES = [
     ['run', '🏃', 'Убегает', 'не поймать'], ['shrink', '🤏', 'Уменьшается', '«Да» при этом растёт'],
@@ -200,13 +209,39 @@
         emojiPicker('Стикер на приглашении', cfg.ask.sticker, (e) => set('ask.sticker', e, true))];
     },
     gate() {
-      return [...panelHead('Как откроется приглашение', 'Первое, что увидит получатель.'),
-        h('div', { class: 'theme-cards two' }, [['envelope', 'Конверт', 'нужно нажать, чтобы открыть'], ['button', 'Кнопка «Открыть»', 'проще и быстрее']].map(([id, name, sub]) => h('button', {
-          type: 'button', class: 'tcard' + (cfg.gate.type === id ? ' on' : ''), 'aria-pressed': String(cfg.gate.type === id), on: { click: () => set('gate.type', id, true) },
-        }, h('span', { class: 'pl tmini gmini', 'data-theme': cfg.theme, 'aria-hidden': 'true' },
-          id === 'envelope' ? h('span', { class: 'gmini-env' }, h('span', { class: 'gmini-seal', text: '♥' })) : [h('span', { class: 'gmini-e', text: '💌' }), h('span', { class: 'tmini-yes', text: 'Открыть' })]),
-        h('span', { class: 'tcard-n', text: name }), h('small', { text: sub })))),
-        textInput('gate.text', 'Подпись (необязательно)', { max: 80, ph: cfg.gate.type === 'button' ? 'Тебе письмо 💌' : 'Тебе письмо. Нажми на конверт 💌' })];
+      const g = cfg.gate;
+      const pick = (id) => {
+        g.type = id;
+        if (id === 'timer' && !g.at) { const t = new Date(Date.now() + 864e5); t.setHours(19, 0, 0, 0); g.at = t.toISOString(); }
+        changed(true);
+      };
+      const mini = (id) => {
+        if (id === 'envelope') return h('span', { class: 'gmini-env' }, h('span', { class: 'gmini-seal', text: '♥' }));
+        if (id === 'button') return [h('span', { class: 'gmini-e', text: '💌' }), h('span', { class: 'tmini-yes', text: 'Открыть' })];
+        if (id === 'none') return [h('span', { class: 'tmini-h', text: '♥' }), h('span', { class: 'tmini-t' }), h('span', { class: 'tmini-b' }, h('span', { class: 'tmini-yes', text: 'Да' }), h('span', { class: 'tmini-no', text: 'Нет' }))];
+        if (id === 'code') return [h('span', { class: 'gmini-e', text: '🔐' }), h('span', { class: 'gmini-code', text: '• • • •' })];
+        if (id === 'scratch') return h('span', { class: 'gmini-scratch', text: 'сотри ✨' });
+        return [h('span', { class: 'gmini-e', text: '⏰' }), h('span', { class: 'gmini-code', text: '12:30:05' })];
+      };
+      const out = [...panelHead('Как откроется приглашение', 'Первое, что увидит получатель.'),
+        h('div', { class: 'theme-cards two' }, GATES.map(([id, name, sub]) => h('button', {
+          type: 'button', class: 'tcard' + (g.type === id ? ' on' : ''), 'aria-pressed': String(g.type === id), on: { click: () => pick(id) },
+        }, h('span', { class: 'pl tmini gmini', 'data-theme': cfg.theme, 'aria-hidden': 'true' }, mini(id)),
+          h('span', { class: 'tcard-n', text: name }), h('small', { text: sub }))))];
+      if (g.type === 'code') {
+        const ci = h('input', { type: 'text', class: 'inp', inputmode: 'numeric', maxlength: 6, placeholder: 'Например, 1402', value: g.code || '', 'aria-label': 'Код' });
+        ci.addEventListener('input', () => { ci.value = ci.value.replace(/\D/g, '').slice(0, 6); set('gate.code', ci.value); });
+        out.push(field('Код (4–6 цифр)', ci, 'Получатель введёт его, чтобы открыть. Например, дата вашего знакомства.'),
+          textInput('gate.hint', 'Подсказка (необязательно)', { max: 80, ph: 'День, когда мы познакомились (ддмм)' }));
+      }
+      if (g.type === 'timer') {
+        const local = (iso) => { const d = new Date(iso); if (isNaN(d)) return ''; const p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; };
+        const ti = h('input', { type: 'datetime-local', class: 'inp', value: g.at ? local(g.at) : '', 'aria-label': 'Когда откроется' });
+        ti.addEventListener('change', () => { const d = new Date(ti.value); set('gate.at', isNaN(d) ? '' : d.toISOString(), true); });
+        out.push(field('Когда откроется', ti, 'До этого времени получатель увидит обратный отсчёт.'));
+      }
+      if (g.type !== 'none') out.push(textInput('gate.text', 'Подпись (необязательно)', { max: 80, ph: GATE_PH[g.type] || '' }));
+      return out;
     },
     ask() {
       return [...panelHead('Главный вопрос', 'Сам вопрос и тёплые слова. Ниже выберите, как поведут себя кнопки «Да» и «Нет».'),
@@ -249,7 +284,7 @@
           h('p', { class: 'f-h', text: 'Получатель увидит ваше время и нажмёт «Подходит».' }));
       }
       list.push(switchRow('date.chat', 'Кнопка «Решим в чате»', 'Если получатель пока не знает, когда свободен'));
-      list.push(...pictureField('date', '💘'),
+      list.push(...pictureField('date', 'pic:bear'),
         textInput('date.title', 'Заголовок', { max: 120, ph: d.mode === 'fixed' ? 'Как тебе такое время?' : 'Когда тебе удобно?' }),
         textArea('date.text', 'Текст (необязательно)', { max: 300 }));
       return list;
@@ -321,6 +356,8 @@
   function validateAll() {
     if (!cfg.toName.trim()) return 'Напишите, кого приглашаете (шаг «Кого зовём»).';
     if (!cfg.ask.title.trim()) return 'Напишите главный вопрос.';
+    if (cfg.gate.type === 'code' && !/^\d{4,6}$/.test(cfg.gate.code || '')) return 'Придумайте код из 4–6 цифр (шаг «Открытие»).';
+    if (cfg.gate.type === 'timer' && !cfg.gate.at) return 'Укажите, когда откроется приглашение (шаг «Открытие»).';
     if (cfg.date.enabled && cfg.date.mode === 'fixed' && !cfg.date.fixedDate) return 'Укажите дату встречи (шаг «Дата и время»).';
     for (const [i, q] of cfg.choices.entries()) {
       if (q.items.filter((it) => it.name.trim()).length < 2) return `В вопросе ${i + 1} нужно хотя бы 2 варианта с названием.`;
