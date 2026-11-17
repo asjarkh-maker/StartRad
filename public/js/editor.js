@@ -37,15 +37,21 @@
   function textsFor(to, from) {
     const a = (f, m) => (to === 'm' ? m : f);
     const me = (f, m, n) => (from === 'f' ? f : from === 'm' ? m : n);
+    // кто кого зовёт: парень — девушку, девушка — парня, или пол не указан / одинаковый
+    const pair = from === 'm' && to === 'f' ? 'mf' : from === 'f' && to === 'm' ? 'fm' : from && from === to ? 'same' : 'any';
     return {
       'ask.text': me('Я долго думала, как бы это спросить… 🙈', 'Я долго думал, как бы это спросить… 🙈', 'Есть один очень важный вопрос… 🙈'),
       'confirm.title': a('Подожди… ты правда сказала «да»? 😳', 'Подожди… ты правда сказал «да»? 😳'),
       'confirm.text': me('А я уже приготовилась тебя уговаривать 😅', 'А я уже приготовился тебя уговаривать 😅', 'А у меня уже были заготовлены уговоры 😅'),
       'confirm.button': 'Да, да, ДА!',
       'date.title': a('Итак… когда ты свободна?', 'Итак… когда ты свободен?'),
-      'date.text': 'Выбери день и время — я подстроюсь 😉',
+      'date.text': { mf: 'Выбери день и время — я всё организую 😉', fm: 'Выбери день и время — я буду готова 💅' }[pair] || 'Выбери день и время — я подстроюсь 😉',
       'final.title': me(a('Рада, что ты не отказалась 💖', 'Рада, что ты не отказался 💖'), a('Рад, что ты не отказалась 💖', 'Рад, что ты не отказался 💖'), a('Ура, ты согласилась! 💖', 'Ура, ты согласился! 💖')),
-      'final.text': a('Будь готова — будет весело 😉 Жду не дождусь!', 'Будь готов — будет весело 😉 Жду не дождусь!'),
+      'final.text': {
+        mf: 'Будь готова — я заеду за тобой 😉',
+        fm: 'Будь готов — и не опаздывай! Можешь заехать за мной 😏',
+        same: a('Будь готова — будет весело 😉 Жду не дождусь!', 'Будь готов — будет весело 😉 Жду не дождусь!'),
+      }[pair] || a('Будь готова — будет весело 😉 Жду не дождусь!', 'Будь готов — будет весело 😉 Жду не дождусь!'),
     };
   }
   function withTexts(c) {
@@ -55,6 +61,7 @@
   // сменили пол — меняем только те тексты, которые человек не правил сам
   function setGender(key, val) {
     const before = textsFor(cfg.toGender, cfg.fromGender);
+    if (key === 'toGender') { const def = (g) => (g === 'm' ? 'night' : 'pink'); if (cfg.theme === def(cfg.toGender)) cfg.theme = def(val); }
     cfg[key] = val;
     const after = textsFor(cfg.toGender, cfg.fromGender);
     for (const path of Object.keys(after)) if ((get(path) || '') === before[path]) { const k = path.split('.'); cfg[k[0]][k[1]] = after[path]; }
@@ -232,12 +239,15 @@
   // ---------- шаги ----------
   const PANELS = {
     who() {
-      return [...panelHead('Кого зовём?', 'Имя увидит получатель — оно подставится в текст.'),
-        textInput('toName', 'Кого приглашаете', { max: 40, ph: 'Аня' }),
-        textInput('fromName', 'Ваше имя (необязательно)', { max: 40, ph: 'Саша' }),
-        h('div', { class: 'f' }, h('span', { class: 'f-l', text: 'Кого зовём' }), tabs([['f', '💗 Девушку'], ['m', '💙 Парня']], cfg.toGender, (v) => setGender('toGender', v))),
-        h('div', { class: 'f' }, h('span', { class: 'f-l', text: 'Кто зовёт' }), tabs([['f', 'Я девушка'], ['m', 'Я парень'], ['', 'Не важно']], cfg.fromGender, (v) => setGender('fromGender', v)),
-          h('span', { class: 'f-h', text: 'Чтобы в текстах были правильные окончания: «сказала / сказал».' })),
+      const tile = (key, val, e, name) => h('button', { type: 'button', class: 'gtile sex' + (cfg[key] === val ? ' on' : ''), 'aria-pressed': String(cfg[key] === val), on: { click: () => setGender(key, val) } },
+        h('span', { class: 'sex-e', text: e, 'aria-hidden': 'true' }), h('span', { class: 'gtile-n', text: name }));
+      return [...panelHead('Кого зовём?', 'Выберите, кому приглашение, — тексты подстроятся сами.'),
+        h('div', { class: 'f' }, h('span', { class: 'f-l', text: 'Приглашение' }),
+          h('div', { class: 'gate-tiles two' }, tile('toGender', 'f', '👩', 'Ей'), tile('toGender', 'm', '👨', 'Ему'))),
+        h('div', { class: 'f' }, h('span', { class: 'f-l', text: 'Кто зовёт' }),
+          tabs([['m', '🙋‍♂️ Я парень'], ['f', '🙋‍♀️ Я девушка'], ['', 'Не указывать']], cfg.fromGender, (v) => setGender('fromGender', v))),
+        textInput('toName', cfg.toGender === 'm' ? 'Как его зовут' : 'Как её зовут', { max: 40, ph: cfg.toGender === 'm' ? 'Дима' : 'Аня' }),
+        textInput('fromName', 'Ваше имя (необязательно)', { max: 40, ph: cfg.fromGender === 'f' ? 'Аня' : 'Саша' }),
         h('div', { class: 'f' }, h('span', { class: 'f-l', text: 'Оформление' }),
           h('div', { class: 'theme-cards' }, THEMES.map(([id, name]) => h('button', {
             type: 'button', class: 'tcard' + (cfg.theme === id ? ' on' : ''), 'aria-pressed': String(cfg.theme === id), on: { click: () => set('theme', id, true) },
