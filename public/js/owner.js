@@ -121,6 +121,9 @@
     const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent('Тебе письмо 💌')}`;
     const shareBtn = h('a', { class: 'btn btn-ghost btn-sm', href: shareUrl, target: '_blank', rel: 'noopener', text: '✈️ Отправить в Telegram' });
     shareBtn.addEventListener('click', (e) => { goal('link_share'); if (window.TG && window.TG.inside) { e.preventDefault(); window.TG.openTg(shareUrl); } });
+    if (d.stats.opens || a) root.append(h('div', { class: 'card card-accent' },
+      h('p', { style: 'margin:0', html: false, text: `👀 Ссылку уже открывали${a && a.yesAt ? ' и ответили' : ''}. Если это были вы (проверяли) — сбросьте ответ перед отправкой, иначе ${d.config.toName} увидит «ответ уже отправлен».` }),
+      resetBtn()));
     root.append(h('div', { class: 'card' }, h('div', { class: 'step-title' }, h('span', { class: 'step-num', text: String(n++) }), 'Отправьте ссылку'),
       h('div', { class: 'linkbox' }, input, copyBtn),
       h('div', { class: 'own-actions' }, shareBtn),
@@ -146,19 +149,21 @@
         rows.map(([k, v]) => h('p', {}, h('b', { text: k + ': ' }), v)),
         h('p', { class: 'f-h', text: fmtTime(a.finishedAt || a.yesAt) })));
     }
-    if (d.stats.opens || a) {
-      const rb = h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: '🔄 Сбросить ответ', style: 'margin-top:14px' });
-      rb.addEventListener('click', async () => {
-        if (!confirm('Сбросить ответ и счётчики? Пригодится, если вы проходили приглашение сами. Получатель сможет ответить заново, бот снова пришлёт уведомления.')) return;
-        rb.disabled = true;
-        const r = await fetch(`/api/m/${token}/reset`, { method: 'POST' });
-        if (r.ok) load(); else { rb.disabled = false; alert('Не получилось, попробуйте ещё раз'); }
-      });
-      box.append(rb, h('p', { class: 'f-h', text: 'Проверяли приглашение сами? Сбросьте ответ перед отправкой — иначе получатель увидит «ответ уже отправлен».' }));
-    }
+    if (d.stats.opens || a) box.append(resetBtn(), h('p', { class: 'f-h', text: 'Проверяли приглашение сами? Сбросьте ответ перед отправкой — иначе получатель увидит «ответ уже отправлен».' }));
     root.append(box);
     clearTimeout(timer);
     if (!answered) timer = setTimeout(load, 10000);
+  }
+
+  function resetBtn() {
+    const rb = h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: '🔄 Сбросить ответ', style: 'margin-top:14px' });
+    rb.addEventListener('click', async () => {
+      if (!confirm('Сбросить ответ и счётчики? Пригодится, если вы проходили приглашение сами. Получатель сможет ответить заново, бот снова пришлёт уведомления.')) return;
+      rb.disabled = true;
+      const r = await fetch(`/api/m/${token}/reset`, { method: 'POST' });
+      if (r.ok) load(); else { rb.disabled = false; alert('Не получилось, попробуйте ещё раз'); }
+    });
+    return rb;
   }
 
   function openPreview() {
