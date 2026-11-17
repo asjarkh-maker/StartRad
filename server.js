@@ -306,8 +306,9 @@ app.post('/api/m/:token/pay', rate('pay', 30, 3600e3), async (req, res) => {
       if (inv.paid) return res.json({ paid: true });
       if (st === 'pending') return res.json({ confirmationUrl: inv.payment.url });
     }
+    // почту для чека не спрашиваем заранее: её запросит ЮKassa на своей странице
     const email = String((req.body || {}).email || '').trim().slice(0, 254);
-    if (S().yookassa.receipt && !EMAIL_RE.test(email)) return res.status(400).json({ error: 'Укажите почту — на неё придёт чек' });
+    if (email && !EMAIL_RE.test(email)) return res.status(400).json({ error: 'Проверьте почту для чека', needEmail: true });
     const amount = S().price;
     const p = await yookassa.createPayment({
       amount,
@@ -323,6 +324,8 @@ app.post('/api/m/:token/pay', rate('pay', 30, 3600e3), async (req, res) => {
     res.json({ confirmationUrl: url });
   } catch (e) {
     console.error('ЮKassa:', e.message);
+    const email = String((req.body || {}).email || '').trim();
+    if (S().yookassa.receipt && !email && e.status === 400 && /customer|receipt|email|phone|чек|покупател/i.test(e.message)) return res.status(400).json({ error: 'Укажите почту — на неё придёт чек', needEmail: true });
     res.status(502).json({ error: 'Не удалось создать платёж. Попробуйте ещё раз через минуту.' });
   }
 });
@@ -354,6 +357,49 @@ app.get('/api/i/:slug', (req, res) => {
   if (expired(inv)) return res.status(410).json({ error: 'Срок действия приглашения истёк' });
   res.json({ config: inv.config, answered: Boolean(inv.answer && (inv.answer.finishedAt || inv.answer.declinedAt)), declined: Boolean(inv.answer && inv.answer.declinedAt) });
 });
+// ---- ответы получателя → сообщения создателю в Telegram ----
+function answerLines(inv) {
+  const a = inv.answer || {};
+  const lines = [];
+  if (a.date && a.date.chat) lines.push('🗓 Время обсудите в чате');
+  else if (a.date && a.date.date) {
+    const [y, m, dd] = a.date.date.split('-').map(Number);
+    const when = new Date(y, m - 1, dd).toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
+    lines.push(`🗓 ${telegram.esc(when)}${a.date.time ? ', ' + telegram.esc(a.date.time) : ''}`);
+  }
+  for (const c of a.choices || []) if (c) lines.push(`✨ ${telegram.esc((c.title || 'Выбор').replace(/[?:.!]+$/, ''))} — ${telegram.esc(c.picks.join(', '))}`);
+  return lines;
+}
+const ownerLink = (inv) => (S().site.url ? `\n<a href="${telegram.esc(S().site.url)}/m/${inv.token}">Открыть приглашение</a>` : '');
+const nameOf = (inv) => `<b>${telegram.esc(inv.config.toName)}</b>`;
+function finalMessage(inv, head) {
+  return [head || `💖 ${nameOf(inv)} — «да»!`, ...answerLines(inv), `🙈 Попыток нажать «Нет»: ${inv.stats.noClicks}`, ownerLink(inv)].filter(Boolean).join('\n');
+}
+// «да» сообщаем, даже если получатель не дошёл до конца: через 2 минуты после нажатия, если финала ещё нет
+const YES_WAIT = Number(process.env.YES_NOTIFY_MS) || 2 * 60e3;
+const yesTimers = new Map();
+function scheduleYes(inv) {
+  if (yesTimers.has(inv.slug)) return;
+  yesTimers.set(inv.slug, setTimeout(() => {
+    yesTimers.delete(inv.slug);
+    const a = inv.answer || {};
+    if (a.finishedAt || a.declinedAt || a.yesNotified) return;
+    a.yesNotified = true; save();
+    const so_far = answerLines(inv);
+    telegram.notify(inv, [`💖 ${nameOf(inv)} — «да»!`, 'Сейчас выбирает детали — когда закончит, пришлю всё.', ...(so_far.length ? ['Уже выбрано:', ...so_far] : []), ownerLink(inv)].filter(Boolean).join('\n'));
+  }, YES_WAIT));
+}
+// бота подключили, когда что-то уже произошло, — сразу рассказываем
+function catchUp(inv, chatId) {
+  const a = inv.answer || {};
+  let msg = '';
+  if (a.finishedAt) msg = finalMessage(inv, `💖 ${nameOf(inv)} — «да»! Ответ уже пришёл:`);
+  else if (a.declinedAt) msg = `🙂 Ответ от ${nameOf(inv)} уже пришёл: честное «нет»`;
+  else if (a.yesAt) msg = [`💖 ${nameOf(inv)} уже нажимает «да» и выбирает детали.`, ...answerLines(inv)].join('\n');
+  else if (inv.stats.opens > 0) msg = `💌 ${nameOf(inv)} уже открывает приглашение — ждём ответа.`;
+  if (msg) telegram.sendTo(chatId, msg);
+}
+
 app.post('/api/i/:slug/event', rate('event', 300, 3600e3), (req, res) => {
   const inv = db[req.params.slug];
   if (!inv || !inv.paid || expired(inv)) return res.status(404).end();
@@ -365,7 +411,9 @@ app.post('/api/i/:slug/event', rate('event', 300, 3600e3), (req, res) => {
       if (inv.stats.opens === 1) telegram.notify(inv, `💌 <b>${telegram.esc(inv.config.toName)}</b> открывает ваше приглашение`);
       break;
     case 'no': inv.stats.noClicks += 1; break;
-    case 'yes': a.yesAt = a.yesAt || new Date().toISOString(); break;
+    case 'yes':
+      if (!a.yesAt) { a.yesAt = new Date().toISOString(); scheduleYes(inv); }
+      break;
     case 'date': a.date = d.chat ? { chat: true } : { date: s(d.date, 10), time: s(d.time, 5) }; break;
     case 'choices': {
       const i = Number(d.index);
@@ -383,17 +431,8 @@ app.post('/api/i/:slug/event', rate('event', 300, 3600e3), (req, res) => {
     case 'final':
       if (!a.finishedAt && !a.declinedAt) {
         a.finishedAt = new Date().toISOString();
-        const lines = [`💖 <b>${telegram.esc(inv.config.toName)}</b> — «да»!`];
-        if (a.date && a.date.chat) lines.push('🗓 Время обсудите в чате');
-        else if (a.date && a.date.date) {
-          const [y, m, dd] = a.date.date.split('-').map(Number);
-          const when = new Date(y, m - 1, dd).toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
-          lines.push(`🗓 ${telegram.esc(when)}${a.date.time ? ', ' + telegram.esc(a.date.time) : ''}`);
-        }
-        for (const c of a.choices || []) if (c) lines.push(`✨ ${telegram.esc((c.title || 'Выбор').replace(/[?:.!]+$/, ''))} — ${telegram.esc(c.picks.join(', '))}`);
-        lines.push(`🙈 Попыток нажать «Нет»: ${inv.stats.noClicks}`);
-        if (S().site.url) lines.push(`\n<a href="${telegram.esc(S().site.url)}/m/${inv.token}">Открыть приглашение</a>`);
-        telegram.notify(inv, lines.join('\n'));
+        clearTimeout(yesTimers.get(inv.slug)); yesTimers.delete(inv.slug);
+        telegram.notify(inv, finalMessage(inv, a.yesNotified ? `✅ ${nameOf(inv)} — все ответы:` : null));
       }
       break;
     default: return res.status(400).end();
@@ -518,5 +557,5 @@ app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
   res.status(500).json({ error: 'Ошибка сервера' });
 });
 
-telegram.start({ findByCode: (code) => byTgCode.get(code) || null, save, onBackupCode });
+telegram.start({ findByCode: (code) => byTgCode.get(code) || null, save, onBackupCode, onLinked: catchUp });
 app.listen(PORT, () => console.log(`«Только да» запущен: http://localhost:${PORT} (оплата: ${paymentMode()})`));

@@ -39,8 +39,9 @@ async function createPayment({ amount, description, returnUrl, metadata, email }
     metadata,
   };
   if (y.receipt) {
+    // без почты ЮKassa сама спросит её на странице оплаты
     body.receipt = {
-      customer: { email },
+      ...(email ? { customer: { email } } : {}),
       items: [{
         description: description.slice(0, 128),
         quantity: '1.00',

@@ -48,8 +48,9 @@
   function screensOf(cfg) {
     const list = ['gate', 'ask'];
     if (!cfg.confirm || cfg.confirm.enabled !== false) list.push('confirm');
-    if (cfg.date && cfg.date.enabled) list.push('date');
+    // сначала «куда», потом «когда» — время зависит от места
     (cfg.choices || []).forEach((_, i) => list.push('choice' + i));
+    if (cfg.date && cfg.date.enabled) list.push('date');
     list.push('final');
     return list;
   }
@@ -356,7 +357,7 @@
       emit('final');
       later(confetti, 150);
       return h('div', { class: 'pl-screen pl-center' }, sticker(f.sticker || '🥳', 'big'),
-        h('h2', { class: 'pl-title', text: fill(f.title) || 'Это свидание!' }),
+        h('h2', { class: 'pl-title', text: fill(f.title) || 'Ура, встречаемся!' }),
         f.text ? h('p', { class: 'pl-text', text: fill(f.text) }) : null, sum,
         h('p', { class: 'pl-hint', text: cfg.fromName ? `${cfg.fromName} уже знает ответ 😊` : 'Ответ уже отправлен 😊' }),
         live ? h('a', { class: 'pl-link', href: '/', text: 'Создать своё приглашение' }) : null);

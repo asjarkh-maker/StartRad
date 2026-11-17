@@ -77,16 +77,18 @@
       const err = h('div', { class: 'error' });
       const checking = Boolean(params.get('paid')) && d.payment && d.payment.status === 'pending' && checks < 20;
       if (d.payment && d.payment.status === 'canceled') err.textContent = 'Оплата не прошла. Можно попробовать ещё раз.';
-      const email = meta.receipt ? h('input', { class: 'inp', type: 'email', placeholder: 'Почта для чека', autocomplete: 'email', style: 'margin-bottom:12px' }) : null;
+      // поле почты показываем, только если ЮKassa сама не смогла её спросить
+      const email = h('input', { class: 'inp', type: 'email', placeholder: 'Почта для чека', autocomplete: 'email', style: 'margin-bottom:12px', hidden: true });
       const pay = h('button', { class: 'btn', type: 'button', text: checking ? 'Проверяем оплату…' : `Получить ссылку — ${d.price} ₽`, disabled: checking });
       goalOnce('checkout_view', d.slug);
       pay.addEventListener('click', async () => {
         goal('pay_click');
         pay.disabled = true; err.textContent = '';
         try {
-          const r = await fetch(`/api/m/${token}/pay`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: email ? email.value.trim() : '' }) });
+          const r = await fetch(`/api/m/${token}/pay`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: email.hidden ? '' : email.value.trim() }) });
           const j = await r.json().catch(() => ({}));
           if (j.confirmationUrl) { location.href = j.confirmationUrl; return; }
+          if (j.needEmail) { email.hidden = false; email.focus(); }
           if (!r.ok) throw new Error(j.error || 'Ошибка оплаты');
           load();
         } catch (e) { err.textContent = e.message; pay.disabled = false; }
@@ -94,13 +96,24 @@
       root.append(h('div', { class: 'card' }, h('div', { class: 'step-title' }, h('span', { class: 'step-num', text: '2' }), 'Получите ссылку для отправки'),
         h('p', { style: 'color:var(--muted);margin:0 0 16px', text: `Ссылка будет работать ${meta.days || 30} дней. Отправьте её в любой мессенджер.` }),
         meta.bot ? h('div', { class: 'bot-note' }, h('span', { class: 'bot-note-e', text: '🤖', 'aria-hidden': 'true' }),
-          h('span', {}, h('b', { text: 'После оплаты подключите бота — ' }),
-            (d.telegram && d.telegram.linked) ? `он уже подключён и пришлёт ответ в Telegram: дату, время и выбор.` : `кнопка появится здесь. Бот @${meta.bot} пришлёт ответ в Telegram: дату, время и выбор.`)) : null,
+          h('span', {}, h('b', { text: 'Сразу после оплаты подключите бота — ' }),
+            (d.telegram && d.telegram.linked) ? `он уже подключён и пришлёт ответ в Telegram: дату, время и выбор.` : `до отправки ссылки, кнопка появится здесь. Бот @${meta.bot} сообщит, когда приглашение откроют, и пришлёт ответ: дату, время и выбор.`)) : null,
         email, pay, err,
         h('p', { class: 'f-h' }, 'Нажимая кнопку, вы принимаете ', h('a', { href: '/oferta', target: '_blank', text: 'оферту' }), ' и ',
           h('a', { href: '/privacy', target: '_blank', text: 'политику конфиденциальности' }), '.')));
       if (checking) { checks++; clearTimeout(timer); timer = setTimeout(checkPayment, 3000); }
       return;
+    }
+    // 2. сначала Telegram — тогда бот сообщит и об открытии ссылки
+    let n = 2;
+    if (d.telegram) {
+      const linked = d.telegram.linked;
+      root.append(h('div', { class: 'card' + (linked ? '' : ' card-accent') }, h('div', { class: 'step-title' }, h('span', { class: 'step-num', text: String(n) }), linked ? 'Ответ придёт в Telegram' : 'Подключите Telegram — до отправки ссылки'),
+        linked
+          ? h('p', { style: 'margin:0', text: '✅ Бот подключён: напишет, когда приглашение откроют, и пришлёт ответ — дату, время и выбор.' })
+          : [h('p', { style: 'color:var(--muted);margin:0 0 14px', text: 'Займёт 10 секунд: откроется бот — нажмите «Запустить». Тогда вы узнаете, когда приглашение откроют, и сразу получите ответ.' }),
+            h('a', { class: 'btn btn-sm', href: d.telegram.link, target: '_blank', rel: 'noopener', text: '🤖 Получать ответ в Telegram' })]));
+      n++;
     }
     const input = h('input', { class: 'inp', readonly: true, value: link, 'aria-label': 'Ссылка для отправки' });
     const copyBtn = h('button', { class: 'btn btn-sm', type: 'button', text: 'Скопировать' });
@@ -108,23 +121,14 @@
     const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent('Тебе письмо 💌')}`;
     const shareBtn = h('a', { class: 'btn btn-ghost btn-sm', href: shareUrl, target: '_blank', rel: 'noopener', text: '✈️ Отправить в Telegram' });
     shareBtn.addEventListener('click', (e) => { goal('link_share'); if (window.TG && window.TG.inside) { e.preventDefault(); window.TG.openTg(shareUrl); } });
-    root.append(h('div', { class: 'card' }, h('div', { class: 'step-title' }, h('span', { class: 'step-num', text: '2' }), 'Отправьте ссылку'),
+    root.append(h('div', { class: 'card' }, h('div', { class: 'step-title' }, h('span', { class: 'step-num', text: String(n++) }), 'Отправьте ссылку'),
       h('div', { class: 'linkbox' }, input, copyBtn),
       h('div', { class: 'own-actions' }, shareBtn),
       d.expiresAt ? h('p', { class: d.expired ? 'error' : 'f-h', text: d.expired ? `Срок действия ссылки истёк ${fmtTime(d.expiresAt)}. Получатель её больше не откроет.` : `Ссылка работает до ${fmtTime(d.expiresAt)}.` }) : null,
       h('p', { class: 'f-h', text: 'Сами ссылку не открывайте — просмотр засчитается как открытие. Для проверки есть превью.' })));
 
-    // уведомления в Telegram
-    if (d.telegram) {
-      root.append(h('div', { class: 'card' }, h('div', { class: 'step-title' }, '🔔 Ответ в Telegram'),
-        d.telegram.linked
-          ? h('p', { style: 'margin:0', text: '✅ Уведомления включены — бот напишет, когда приглашение откроют и ответят.' })
-          : [h('p', { style: 'color:var(--muted);margin:0 0 14px', text: 'Бот пришлёт сообщение, когда приглашение откроют и ответят.' }),
-            h('a', { class: 'btn btn-ghost btn-sm', href: d.telegram.link, target: '_blank', rel: 'noopener', text: 'Получать ответ в Telegram' })]));
-    }
-
     // 3. ответ
-    const box = h('div', { class: 'card' }, h('div', { class: 'step-title' }, h('span', { class: 'step-num', text: '3' }), 'Ответ'),
+    const box = h('div', { class: 'card' }, h('div', { class: 'step-title' }, h('span', { class: 'step-num', text: String(n) }), 'Ответ'),
       h('div', { class: 'stats' },
         h('div', { class: 'stat' }, h('b', { text: d.stats.opens }), h('span', { text: 'открытий' })),
         h('div', { class: 'stat' }, h('b', { text: d.stats.noClicks }), h('span', { text: 'попыток нажать «Нет»' })),

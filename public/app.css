@@ -16,7 +16,7 @@
 .pl * { box-sizing: border-box; }
 .pl-bg span { position: absolute; color: var(--a1); opacity: .22; animation: pl-float 6s ease-in-out infinite; pointer-events: none; }
 @keyframes pl-float { 50% { transform: translateY(-14px); } }
-.pl-stage { position: relative; height: 100%; overflow-x: hidden; overflow-y: auto; display: flex; flex-direction: column; justify-content: center; padding: 28px 20px; max-width: 460px; margin: 0 auto; }
+.pl-stage { position: relative; height: 100%; overflow-x: hidden; overflow-y: auto; display: flex; flex-direction: column; padding: 28px 20px; max-width: 460px; margin: 0 auto; }
 .pl-screen { display: flex; flex-direction: column; gap: 14px; animation: pl-pop .4s ease; margin: auto 0; }
 .pl-center { align-items: center; text-align: center; }
 @keyframes pl-pop { from { opacity: 0; transform: translateY(16px) scale(.97); } }
@@ -280,3 +280,8 @@ textarea.inp { resize: vertical; min-height: 84px; }
 /* «после оплаты ответы придут в Telegram» */
 .bot-note { display: flex; gap: 10px; align-items: flex-start; background: #eaf4ff; border-radius: 14px; padding: 12px 14px; margin: 12px 0 14px; font-size: 14px; line-height: 1.45; color: #1d3a5c; }
 .bot-note-e { font-size: 20px; line-height: 1; }
+
+.own .card-accent { border: 2px solid #9cc7ff; background: #f3f8ff; }
+.chips .chip.on { border-color: var(--pink); background: #fff0f5; }
+.final-chips { margin: -6px 0 16px; }
+[hidden] { display: none !important; }

@@ -120,6 +120,7 @@ async function handle(update) {
     chat_id: chatId, parse_mode: 'HTML',
     text: `Готово! Пришлю сюда, когда <b>${esc(inv.config.toName)}</b> откроет приглашение и ответит 💌`,
   });
+  if (hooks.onLinked) hooks.onLinked(inv, chatId);
 }
 
 async function loop() {

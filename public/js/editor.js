@@ -38,7 +38,7 @@
     confirm: { enabled: true, picture: 'sticker', photo: '', title: 'Ура! Лучший ответ на свете 💖', text: '', sticker: '🥰', button: 'Дальше' },
     date: { enabled: true, mode: 'ask', fixedDate: '', fixedTime: '', chat: true, picture: 'sticker', photo: '', title: 'Когда тебе удобно?', text: 'Выбери день и время — я подстроюсь.', sticker: '💘' },
     choices: [{ title: 'Куда пойдём?', multi: false, items: [{ name: 'Парк', emoji: '🌳' }, { name: 'Ресторан', emoji: '🍽️' }, { name: 'Набережная', emoji: '🌅' }, { name: 'Уютный вечер дома', emoji: '🏠' }, { name: 'Кофейня', emoji: '☕' }, { name: 'Кино', emoji: '🎬' }] }],
-    final: { title: 'Это свидание!', text: 'Жду нашей встречи 💞', sticker: '🥳' },
+    final: { title: 'Ура, встречаемся!', text: 'Жду нашей встречи 💞', sticker: '🥳' },
   });
 
   const STEPS = [
@@ -46,8 +46,8 @@
     { id: 'gate', name: 'Открытие' },
     { id: 'ask', name: 'Вопрос' },
     { id: 'confirm', name: 'После «Да»' },
-    { id: 'date', name: 'Дата и время' },
     { id: 'choices', name: 'Выбор' },
+    { id: 'date', name: 'Дата и время' },
     { id: 'final', name: 'Финал' },
     { id: 'done', name: 'Готово' },
   ];
@@ -114,6 +114,7 @@
     return h('div', { class: 'f' }, label ? h('span', { class: 'f-l', text: label }) : null,
       h('div', { class: 'emojis' }, STICKERS.map((e) => h('button', { type: 'button', class: 'emo' + (cur === e ? ' on' : ''), text: e, 'aria-label': e, on: { click: () => onPick(e) } })), own));
   }
+  const FINAL_TITLES = ['Ура, встречаемся!', 'Договорились! 🤝', 'Жду с нетерпением!', 'Это будет чудесно ✨', 'Это свидание!'];
   const NO_MODES = [
     ['run', '🏃', 'Убегает', 'не поймать'], ['shrink', '🤏', 'Уменьшается', '«Да» при этом растёт'],
     ['kiss', '💋', 'Уговаривает', 'поцелуи и «ну пожалуйста»'], ['turn', '🔄', 'Становится «Да»', 'после первого нажатия'],
@@ -283,6 +284,7 @@
     final() {
       return [...panelHead('Финал', 'Последний экран. Дату и выбор получатель увидит списком.'),
         textInput('final.title', 'Заголовок', { max: 120 }),
+        h('div', { class: 'chips final-chips' }, FINAL_TITLES.map((t) => h('button', { type: 'button', class: 'chip' + (cfg.final.title === t ? ' on' : ''), text: t, on: { click: () => set('final.title', t, true) } }))),
         textArea('final.text', 'Текст', { max: 600, hint: 'Можно писать {дата} и {выбор} — подставятся ответы получателя' }),
         emojiPicker('Стикер', cfg.final.sticker, (e) => set('final.sticker', e, true))];
     },
