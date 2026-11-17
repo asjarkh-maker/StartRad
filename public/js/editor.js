@@ -411,9 +411,12 @@
     previewTimer = setTimeout(() => refreshPreview(), 0);
   }
   function goStep(i) {
+    const prev = stepIdx;
     stepIdx = Math.max(0, Math.min(STEPS.length - 1, i));
     saveDraft(); renderDots(); renderPanel(); refreshPreview();
     $('#panel').scrollTop = 0;
+    // новый шаг открывается с начала страницы, а не там, где была кнопка «Дальше»
+    if (stepIdx !== prev) window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }
 
   $('#back').addEventListener('click', () => goStep(stepIdx - 1));
