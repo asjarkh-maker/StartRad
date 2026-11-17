@@ -105,7 +105,7 @@ function patchFrom(b) {
   return p;
 }
 
-function routes(app, { status, stats = () => ({}), backup = null, onSaved = () => {} }) {
+function routes(app, { status, stats = () => ({}), backup = null, onSaved = () => {}, gifts = null }) {
   const sendFile = (res) => {
     res.setHeader('X-Robots-Tag', 'noindex');
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
@@ -159,6 +159,16 @@ function routes(app, { status, stats = () => ({}), backup = null, onSaved = () =
       catch (e) { res.status(400).json({ error: e.message, settings: view() }); }
     });
     app.post('/api/admin/backup/off', guard, (req, res) => { backup.off(); res.json({ ok: true, settings: view() }); });
+  }
+
+  // бесплатные ссылки (реклама, блогеры): найти неоплаченное приглашение и активировать без оплаты
+  if (gifts) {
+    app.get('/api/admin/unpaid', guard, (req, res) => res.json({ list: gifts.find(String(req.query.q || '').slice(0, 40)) }));
+    app.post('/api/admin/gift', guard, (req, res) => {
+      const r = gifts.give(String((req.body || {}).slug || ''));
+      if (!r) return res.status(404).json({ error: 'Приглашение не найдено' });
+      res.json(r);
+    });
   }
 
   app.get('/api/admin/settings', guard, (req, res) => res.json({ settings: view(), status: status() }));

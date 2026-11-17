@@ -320,7 +320,33 @@
         })) : h('p', { class: 'f-h', text: 'Оплат пока нет.' }),
       h('p', { class: 'f-h', text: 'Возврат: скопируйте номер платежа → кабинет ЮKassa → «Платежи» → вставьте номер в поиск → «Вернуть платёж». Там же видно почту и карту плательщика.' }));
 
-    app.append(h('h1', { text: 'Админка' }), tabsBar(), periods, tiles, chartCard, lists, recent,
+    var giftQ = h('input', { class: 'inp', placeholder: 'Имя получателя, например Самира' });
+    var giftOut = h('div');
+    var giftFind = h('button', { class: 'btn btn-sm', type: 'button', text: 'Найти' });
+    giftFind.addEventListener('click', function () {
+      giftOut.textContent = 'Ищу…';
+      fetch('/api/admin/unpaid?q=' + encodeURIComponent(giftQ.value.trim())).then(function (r) { return r.json(); }).then(function (d) {
+        giftOut.textContent = '';
+        if (!d.list || !d.list.length) { giftOut.append(h('p', { class: 'f-h', text: 'Неоплаченных приглашений с таким именем нет.' })); return; }
+        d.list.forEach(function (it) {
+          var b = h('button', { class: 'btn btn-sm', type: 'button', text: 'Активировать бесплатно' });
+          var row = h('div', { style: 'display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:8px 0' },
+            h('b', { text: it.to }), h('span', { class: 'f-h', text: new Date(it.at).toLocaleString('ru-RU', { timeZone: 'Asia/Yekaterinburg', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) }), b);
+          b.addEventListener('click', function () {
+            b.disabled = true;
+            fetch('/api/admin/gift', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ slug: it.slug }) }).then(function (r) { return r.json(); }).then(function (g) {
+              row.textContent = '';
+              row.append(h('span', { text: '✅ ' + g.to + ' — ссылка: ' }), h('code', { text: g.link, style: 'user-select:all' }), h('a', { href: g.owner, target: '_blank', text: 'страница приглашения' }));
+            });
+          });
+          giftOut.append(row);
+        });
+      });
+    });
+    var gift = h('div', { class: 'card' }, h('h3', { text: 'Бесплатная ссылка (реклама, блогеры)' }),
+      h('p', { class: 'f-h', text: 'Создайте приглашение как обычно, но не оплачивайте. Найдите его здесь по имени и активируйте — в выручку не попадёт.' }),
+      h('div', { style: 'display:flex;gap:10px' }, giftQ, giftFind), giftOut);
+    app.append(h('h1', { text: 'Админка' }), tabsBar(), periods, tiles, chartCard, lists, recent, gift,
       h('p', { class: 'f-h', text: 'Время — ' + st.tz + '. Выручка и оплаты — только настоящие платежи ЮKassa' + (t.testPaid ? '; ещё ' + t.testPaid + ' ссылок выдано в тестовом режиме.' : '.') }));
   }
 

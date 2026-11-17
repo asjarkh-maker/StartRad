@@ -579,6 +579,17 @@ admin.routes(app, {
   status: () => ({ bot: telegram.username() || null, payment: paymentMode(), version: version() || null }),
   stats: (days) => computeStats(days),
   backup: { link: backupLink, send: () => sendBackup('manual'), off: () => settings.save({ backup: { chatId: 0 } }) },
+  gifts: {
+    find: (q) => Object.values(db).filter((i) => !i.paid && (!q || (i.config.toName || '').toLowerCase().includes(q.toLowerCase())))
+      .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)).slice(0, 10)
+      .map((i) => ({ slug: i.slug, to: i.config.toName, at: i.createdAt })),
+    give: (slug) => {
+      const inv = db[slug]; if (!inv) return null;
+      if (!inv.paid) { markPaid(inv); inv.gift = true; save(); }
+      const base = S().site.url || '';
+      return { to: inv.config.toName, link: `${base}/i/${inv.slug}`, owner: `${base}/m/${inv.token}` };
+    },
+  },
   onSaved: (patch) => { if (patch.telegram) telegram.kick(); else if (patch.site && patch.site.url !== undefined) telegram.setupMenu(); },
 });
 
