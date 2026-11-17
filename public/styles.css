@@ -247,3 +247,15 @@ h1, h2, .pl-title { overflow-wrap: break-word; hyphens: auto; -webkit-hyphens: a
 .proof-av { display: flex; }
 .proof-av img { width: 40px; height: 40px; border-radius: 50%; background: #fff; border: 2px solid #fff; box-shadow: 0 4px 10px -4px rgba(0,0,0,.2); object-fit: cover; margin-left: -10px; }
 .proof-av img:first-child { margin-left: 0; }
+
+/* первый экран главной помещается в окно компьютера целиком */
+@media (min-width: 761px) {
+  .hero { padding: 12px 0 40px; min-height: calc(100vh - 110px); gap: 28px; }
+  .hero h1 { font-size: clamp(34px, min(4.6vw, 7.4vh), 64px); hyphens: manual; -webkit-hyphens: manual; overflow-wrap: normal; margin-bottom: 14px; }
+  .subhead { font-size: clamp(18px, min(2.1vw, 3.4vh), 28px); margin-bottom: 14px; }
+  .for-who { margin: 2px 0 12px; }
+  .lead { font-size: clamp(15px, 2.2vh, 19px); margin-bottom: clamp(16px, 3vh, 30px); }
+  .proof { margin-top: clamp(12px, 2.2vh, 22px); }
+  .fineprint { margin-top: clamp(8px, 1.6vh, 18px); }
+  .phone { height: clamp(440px, calc(100vh - 170px), 620px); width: calc(clamp(440px, calc(100vh - 170px), 620px) * .516); }
+}
