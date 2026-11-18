@@ -385,7 +385,7 @@
           h('span', {}, h('b', { text: 'После оплаты ответы придут в Telegram. ' }),
             `Бот @${meta.bot} пришлёт, когда приглашение откроют, а потом — ответ: дату и время встречи, выбранные места и сколько раз пытались нажать «Нет».`)) : null,
         err ? h('div', { class: 'error', text: err }) : null,
-        h('button', { type: 'button', class: 'btn', id: 'create', text: 'Создать приглашение 💌', on: { click: submit } }),
+        h('button', { type: 'button', class: 'btn', id: 'create', text: 'Готово — получить ссылку 💌', on: { click: submit } }),
         h('div', { class: 'error', id: 'create-err' }),
         h('p', { class: 'f-h' }, 'Пользуясь сервисом, вы соглашаетесь с ', h('a', { href: '/privacy', target: '_blank', text: 'политикой конфиденциальности' }),
           ' и ', h('a', { href: '/consent', target: '_blank', text: 'обработкой персональных данных' }), '. Условия услуги — в ', h('a', { href: '/oferta', target: '_blank', text: 'публичной оферте' }), '.')];
@@ -427,7 +427,7 @@
       if (!editToken) goal('create_done');
       setTimeout(() => { location.href = `/m/${editToken || d.owner}${editToken ? '?saved=1' : '?new=1'}`; }, editToken ? 0 : 300);
     } catch (e) {
-      box.textContent = e.message; submitting = false; btn.disabled = false; btn.textContent = editToken ? 'Сохранить изменения' : 'Создать приглашение 💌';
+      box.textContent = e.message; submitting = false; btn.disabled = false; btn.textContent = editToken ? 'Сохранить изменения' : 'Готово — получить ссылку 💌';
     }
   }
 
