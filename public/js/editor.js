@@ -89,7 +89,7 @@
     { id: 'done', name: 'Готово' },
   ];
 
-  let cfg = defaults(), stepIdx = 0, player = null, activeChoice = 0, submitting = false, meta = { price: 490, pay: true };
+  let cfg = defaults(), stepIdx = 0, player = null, activeChoice = 0, submitting = false, meta = { price: 290, pay: true };
   let previewTimer = 0;
   let inlinePlayer = null;
 
@@ -380,7 +380,7 @@
       return [...panelHead('Всё готово! 💌', 'Пройдите приглашение в превью целиком — так его увидит получатель.'),
         h('div', { class: 'sum-card' }, h('b', { text: 'Что вы получите' }),
           h('ul', { class: 'gets' }, gets.map((t) => h('li', { text: t })))),
-        h('p', { class: 'f-h', text: meta.pay ? `Дальше — оплата ${meta.price} ₽, сразу после неё вы получите ссылку. Собрать и посмотреть — бесплатно.` : 'Дальше вы получите ссылку для отправки.' }),
+        h('p', { class: 'f-h', text: meta.pay ? `Дальше — оплата ${meta.price} ₽ (сюрприз по цене чашки кофе ☕️). Сразу после оплаты вы получите ссылку. Собрать и посмотреть — бесплатно.` : 'Дальше вы получите ссылку для отправки.' }),
         meta.bot ? h('div', { class: 'bot-note' }, h('span', { class: 'bot-note-e', text: '🤖', 'aria-hidden': 'true' }),
           h('span', {}, h('b', { text: 'После оплаты ответы придут в Telegram. ' }),
             `Бот @${meta.bot} пришлёт, когда приглашение откроют, а потом — ответ: дату и время встречи, выбранные места и сколько раз пытались нажать «Нет».`)) : null,

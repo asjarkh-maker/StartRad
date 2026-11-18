@@ -259,3 +259,4 @@ h1, h2, .pl-title { overflow-wrap: break-word; hyphens: auto; -webkit-hyphens: a
   .fineprint { margin-top: clamp(8px, 1.6vh, 18px); }
   .phone { height: clamp(440px, calc(100vh - 170px), 620px); width: calc(clamp(440px, calc(100vh - 170px), 620px) * .516); }
 }
+.coffee { text-align: center; margin: 10px 0 0; font-weight: 600; color: var(--muted); font-size: 15px; }

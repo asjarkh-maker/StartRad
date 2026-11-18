@@ -98,7 +98,9 @@
         meta.bot ? h('div', { class: 'bot-note' }, h('span', { class: 'bot-note-e', text: '🤖', 'aria-hidden': 'true' }),
           h('span', {}, h('b', { text: 'Сразу после оплаты подключите бота — ' }),
             (d.telegram && d.telegram.linked) ? `он уже подключён и пришлёт ответ в Telegram: дату, время и выбор.` : `до отправки ссылки, кнопка появится здесь. Бот @${meta.bot} сообщит, когда приглашение откроют, и пришлёт ответ: дату, время и выбор.`)) : null,
-        email, pay, err,
+        email, pay,
+        h('p', { class: 'coffee', text: 'Сюрприз по цене чашки кофе ☕️' }),
+        err,
         h('p', { class: 'f-h' }, 'Нажимая кнопку, вы принимаете ', h('a', { href: '/oferta', target: '_blank', text: 'оферту' }), ' и ',
           h('a', { href: '/privacy', target: '_blank', text: 'политику конфиденциальности' }), '.')));
       if (checking) { checks++; clearTimeout(timer); timer = setTimeout(checkPayment, 3000); }
