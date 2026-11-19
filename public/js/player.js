@@ -58,9 +58,9 @@
   function mount(root, cfg, opts = {}) {
     const live = opts.mode === 'live';
     const emit = opts.onEvent || (() => {});
-    const order = screensOf(cfg);
-    const answers = { noClicks: 0, date: null, picks: [] };
-    const seed = () => { answers.noClicks = 0; answers.date = opts.demo ? opts.demo.date || null : null; answers.picks = opts.demo ? (opts.demo.picks || []).slice() : []; };
+    let order = screensOf(cfg);
+    const answers = { noClicks: 0, date: null, picks: [], subs: {} };
+    const seed = () => { answers.subs = {}; answers.noClicks = 0; answers.date = opts.demo ? opts.demo.date || null : null; answers.picks = opts.demo ? (opts.demo.picks || []).slice() : []; };
     seed();
     let cur = -1, timers = [], opened = false;
 
@@ -106,7 +106,8 @@
       stopAnims();
       stage.innerHTML = '';
       stage.scrollTop = 0;
-      const el = ({ gate, ask, confirm, date, final })[id] ? ({ gate, ask, confirm, date, final })[id]() : choice(Number(id.slice(6)));
+      const sub = /^sub(\d+)_(\d+)$/.exec(id);
+      const el = ({ gate, ask, confirm, date, final })[id] ? ({ gate, ask, confirm, date, final })[id]() : sub ? choice(Number(sub[1]), Number(sub[2])) : choice(Number(id.slice(6)));
       stage.append(el);
     }
     const next = () => { if (cur < order.length - 1) show(order[cur + 1]); };
@@ -407,8 +408,17 @@
         when, btn, chatBtn);
     }
 
-    function choice(i) {
-      const q = (cfg.choices || [])[i] || { items: [] };
+    // уточняющие экраны вставляем сразу после вопроса — для выбранных вариантов, у которых есть уточнение
+    const subIds = (i, picks) => picks.filter((k) => k !== 'own').filter((k) => { const n = ((cfg.choices || [])[i].items[k] || {}).next; return n && n.items && n.items.length >= 2; }).map((k) => `sub${i}_${k}`);
+    function placeSubs(i, ids) {
+      order = order.filter((x) => !x.startsWith(`sub${i}_`));
+      const at = order.indexOf('choice' + i) + 1;
+      order.splice(at, 0, ...ids);
+    }
+    function choice(i, sk) {
+      const isSub = sk !== undefined;
+      const parent = (cfg.choices || [])[i] || { items: [] };
+      const q = isSub ? ((parent.items[sk] || {}).next || { items: [] }) : parent;
       const picked = new Set();
       const grid = h('div', { class: 'pl-grid' });
       const err = h('div', { class: 'pl-err' });
@@ -426,7 +436,7 @@
       });
       // свой вариант: если ничего из предложенного не подошло
       const OWN = 'own';
-      const ownInp = h('input', { class: 'pl-input pl-input-full pl-own-inp', type: 'text', maxlength: 60, placeholder: 'Напиши своё место или идею', 'aria-label': 'Свой вариант', hidden: true });
+      const ownInp = h('input', { class: 'pl-input pl-input-full pl-own-inp', type: 'text', maxlength: 60, placeholder: isSub ? 'Напиши свой вариант' : 'Напиши своё место или идею', 'aria-label': 'Свой вариант', hidden: true });
       if (q.own !== false) {
         const card = h('button', { class: 'pl-card pl-card-own', type: 'button', 'aria-pressed': 'false' },
           h('span', { class: 'pl-card-e', text: '✏️' }), h('span', { class: 'pl-card-n', text: 'Свой вариант' }));
@@ -447,8 +457,15 @@
         const own = ownInp.value.trim();
         if (picked.has(OWN) && !own) { err.textContent = 'Напиши свой вариант'; ownInp.focus(); return; }
         const names_ = [...picked].map((k) => (k === OWN ? own : q.items[k].name));
-        answers.picks[i] = names_;
-        emit('choices', { index: i, title: q.title, picks: names_ });
+        if (isSub) {
+          answers.subs[`${i}_${sk}`] = names_;
+          emit('choices', { index: i, sub: sk, title: q.title, picks: names_ });
+        } else {
+          answers.picks[i] = names_;
+          for (const key of Object.keys(answers.subs)) if (key.startsWith(i + '_')) delete answers.subs[key];
+          emit('choices', { index: i, title: q.title, picks: names_ });
+          placeSubs(i, subIds(i, [...picked]));
+        }
         next();
       });
       return h('div', { class: 'pl-screen' }, h('h2', { class: 'pl-title', text: fill(q.title) || 'Что выберешь?' }),
@@ -459,7 +476,10 @@
       const f = cfg.final || {};
       const rows = [];
       if (answers.date) rows.push(['🗓️', answers.date.chat ? 'Время обсудим в чате' : prettyDate(answers.date.date, answers.date.time)]);
-      (cfg.choices || []).forEach((q, i) => { if (answers.picks[i]) rows.push([q.items.find((it) => answers.picks[i].includes(it.name))?.emoji || '✨', answers.picks[i].join(', ')]); });
+      (cfg.choices || []).forEach((q, i) => {
+        if (answers.picks[i]) rows.push([q.items.find((it) => answers.picks[i].includes(it.name))?.emoji || '✨', answers.picks[i].join(', ')]);
+        q.items.forEach((it, k) => { const p = answers.subs[`${i}_${k}`]; if (p && it.next) rows.push([it.next.items.find((x) => p.includes(x.name))?.emoji || '✨', p.join(', ')]); });
+      });
       const sum = rows.length ? h('div', { class: 'pl-sum' }, rows.map(([e, t]) => h('div', { class: 'pl-sum-row' }, h('span', { text: e }), h('span', { text: t })))) : null;
       emit('final');
       later(confetti, 150);
@@ -502,12 +522,15 @@
     }
 
     const api = {
-      screens: order,
+      get screens() { return order; },
       demo(kind) { if (demoFx && demoFx[kind] && stage.querySelector('.pl-yes')) demoFx[kind](); },
       goto(id) { timers.forEach(clearTimeout); timers = []; if (order.includes(id)) show(id); },
-      restart() { answers.noClicks = 0; answers.date = null; answers.picks = []; api.goto(order[0]); },
+      restart() { answers.noClicks = 0; answers.date = null; answers.picks = []; answers.subs = {}; order = order.filter((x) => !x.startsWith('sub')); api.goto(order[0]); },
       destroy() { timers.forEach(clearTimeout); stopAnims(); root.innerHTML = ''; root.classList.remove('pl', 'pl-live'); },
     };
+    // превью уточняющего экрана: вставляем его после вопроса
+    const ps = /^sub(\d+)_(\d+)$/.exec(opts.startAt || '');
+    if (ps && order.includes('choice' + ps[1]) && subIds(Number(ps[1]), [Number(ps[2])]).length) { placeSubs(Number(ps[1]), [opts.startAt]); answers.picks[Number(ps[1])] = [cfg.choices[ps[1]].items[ps[2]].name]; }
     show(order.includes(opts.startAt) ? opts.startAt : order[0]);
     return api;
   }

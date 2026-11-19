@@ -146,7 +146,11 @@
       const rows = [];
       if (a.date && a.date.chat) rows.push(['Когда', 'решите в чате 💬']);
       else if (a.date && a.date.date) rows.push(['Когда', Player.prettyDate(a.date.date, a.date.time)]);
-      (a.choices || []).forEach((c) => { if (c) rows.push([(c.title || 'Выбор').replace(/[?:.!]+$/, ''), c.picks.join(', ')]); });
+      (a.choices || []).forEach((c) => {
+        if (!c) return;
+        rows.push([(c.title || 'Выбор').replace(/[?:.!]+$/, ''), c.picks.join(', ')]);
+        Object.values(c.more || {}).forEach((m) => rows.push([(m.title || 'Уточнение').replace(/[?:.!]+$/, ''), m.picks.join(', ')]));
+      });
       box.append(h('div', { class: 'answer-box' }, h('h3', { text: `${d.config.toName} — «да»! 💖` }),
         rows.map(([k, v]) => h('p', {}, h('b', { text: k + ': ' }), v)),
         h('p', { class: 'f-h', text: fmtTime(a.finishedAt || a.yesAt) })));

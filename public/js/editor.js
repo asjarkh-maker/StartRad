@@ -31,7 +31,22 @@
     'Куда пойдём': { title: 'Куда пойдём?', items: [['Парк', '🌳'], ['Ресторан', '🍽️'], ['Набережная', '🌅'], ['Уютный вечер дома', '🏠'], ['Кофейня', '☕'], ['Кино', '🎬']] },
     'Что поедим': { title: 'Что будем есть?', items: [['Пицца', '🍕'], ['Суши', '🍣'], ['Паста', '🍝'], ['Бургеры', '🍔'], ['Десерты', '🍰'], ['Стейк', '🥩']] },
     'Чем займёмся': { title: 'Чем займёмся?', items: [['Боулинг', '🎳'], ['Квест', '🧩'], ['Караоке', '🎤'], ['Настолки', '🎮'], ['Танцы', '💃'], ['Пикник', '🧺']] },
+    'Что посмотрим': { title: 'Что посмотрим?', items: [['Комедия', '😂'], ['Мелодрама', '💕'], ['Боевик', '💥'], ['Ужасы', '👻'], ['Мультфильм', '🧸'], ['Фантастика', '🚀']] },
+    'Что будем пить': { title: 'Что будем пить?', items: [['Кофе', '☕'], ['Чай', '🍵'], ['Какао', '🍫'], ['Лимонад', '🍋'], ['Коктейль', '🍹'], ['Вино', '🍷']] },
   };
+  // уточняющий вопрос после выбора: «Кино» → «Что посмотрим?». Подбирается по названию варианта, потом всё можно править.
+  const FOLLOW = [
+    [/ресторан|кафе|бистро|ужин|поедим|поесть|еда|пиццер|суши/i, 'Что будем есть?', [['Пицца', '🍕'], ['Суши', '🍣'], ['Паста', '🍝'], ['Бургеры', '🍔'], ['Стейк', '🥩'], ['Десерты', '🍰']]],
+    [/кино|фильм|сеанс/i, 'Что посмотрим?', PRESETS['Что посмотрим'].items],
+    [/кофе|бар|чай|напит/i, 'Что будем пить?', PRESETS['Что будем пить'].items],
+    [/дом|квартир/i, 'Чем займёмся дома?', [['Фильм под пледом', '🎬'], ['Настолки', '🎲'], ['Готовим вместе', '🍳'], ['Пицца и сериал', '🍕'], ['Караоке', '🎤'], ['Видеоигры', '🎮']]],
+    [/парк|набережн|прогул|пляж|лес|сквер|крыш/i, 'Чем займёмся?', [['Просто гуляем', '🚶'], ['Пикник', '🧺'], ['Велосипеды', '🚲'], ['Кофе с собой', '☕'], ['Фотосессия', '📸'], ['Мороженое', '🍦']]],
+  ];
+  const followFor = (name) => {
+    const f = FOLLOW.find(([re]) => re.test(name || ''));
+    return f ? { title: f[1], multi: false, own: true, items: f[2].map(([n, e]) => ({ name: n, emoji: e })) } : null;
+  };
+  const withFollow = (items) => items.map((it) => ({ ...it, next: followFor(it.name) || undefined }));
 
   // весёлые тексты по умолчанию с правильными окончаниями: to — кого зовём, from — кто зовёт
   function textsFor(to, from) {
@@ -74,7 +89,7 @@
     ask: { title: 'Пойдёшь со мной на свидание?', text: '', sticker: 'pic:kitties', yes: 'Да 💖', noLines: [], noMode: 'run', yesFx: 'burst' },
     confirm: { enabled: true, picture: 'sticker', photo: '', title: 'Ура! Лучший ответ на свете 💖', text: '', sticker: 'pic:hug', button: 'Дальше' },
     date: { enabled: true, mode: 'ask', fixedDate: '', fixedTime: '', chat: true, picture: 'sticker', photo: '', title: 'Когда тебе удобно?', text: 'Выбери день и время — я подстроюсь.', sticker: 'pic:bear' },
-    choices: [{ title: 'Куда пойдём?', multi: false, own: true, items: [{ name: 'Парк', emoji: '🌳' }, { name: 'Ресторан', emoji: '🍽️' }, { name: 'Набережная', emoji: '🌅' }, { name: 'Уютный вечер дома', emoji: '🏠' }, { name: 'Кофейня', emoji: '☕' }, { name: 'Кино', emoji: '🎬' }] }],
+    choices: [{ title: 'Куда пойдём?', multi: false, own: true, items: withFollow([{ name: 'Парк', emoji: '🌳' }, { name: 'Ресторан', emoji: '🍽️' }, { name: 'Набережная', emoji: '🌅' }, { name: 'Уютный вечер дома', emoji: '🏠' }, { name: 'Кофейня', emoji: '☕' }, { name: 'Кино', emoji: '🎬' }]) }],
     final: { title: 'Ура, встречаемся!', text: 'Жду нашей встречи 💞', sticker: 'pic:bunny' },
   });
 
@@ -89,7 +104,7 @@
     { id: 'done', name: 'Готово' },
   ];
 
-  let cfg = defaults(), stepIdx = 0, player = null, activeChoice = 0, submitting = false, meta = { price: 290, pay: true };
+  let cfg = defaults(), stepIdx = 0, player = null, activeChoice = 0, openSub = null, submitting = false, meta = { price: 290, pay: true };
   let previewTimer = 0;
   let inlinePlayer = null;
 
@@ -135,6 +150,19 @@
     input.value = get(path) || '';
     input.addEventListener('input', () => set(path, input.value));
     return field(label, input, o.hint);
+  }
+  // строки вариантов: эмодзи + название + удалить, и «＋ Вариант»
+  function itemRows(base, q) {
+    const rows = q.items.map((it, k) => {
+      const emo = h('input', { class: 'inp inp-emoji', maxlength: 8, value: it.emoji || '' });
+      emo.addEventListener('input', () => set(`${base}.items.${k}.emoji`, emo.value.trim()));
+      const name = h('input', { class: 'inp', maxlength: 40, placeholder: 'Название', value: it.name || '' });
+      name.addEventListener('input', () => set(`${base}.items.${k}.name`, name.value));
+      return h('div', { class: 'item-row' }, emo, name,
+        h('button', { type: 'button', class: 'x', 'aria-label': 'Удалить', text: '×', on: { click: () => { q.items.splice(k, 1); changed(true); } } }));
+    });
+    if (q.items.length < 8) rows.push(h('button', { type: 'button', class: 'btn btn-ghost btn-sm', text: '＋ Вариант', on: { click: () => { q.items.push({ name: '', emoji: '✨' }); changed(true); } } }));
+    return rows;
   }
   function switchRow(path, label, small) {
     const input = h('input', { type: 'checkbox' });
@@ -333,25 +361,38 @@
       const out = [...panelHead('Варианты на выбор', 'Куда пойти, что поесть — получатель выберет из ваших вариантов.')];
       if (!cfg.choices.length) out.push(h('p', { class: 'f-h', text: 'Вопросов пока нет. Это необязательно — можно пропустить.' }));
       else {
-        out.push(tabs(cfg.choices.map((_, i) => [i, `Вопрос ${i + 1}`]), activeChoice, (v) => { activeChoice = v; renderPanel(); refreshPreview(); }));
+        out.push(tabs(cfg.choices.map((_, i) => [i, `Вопрос ${i + 1}`]), activeChoice, (v) => { activeChoice = v; openSub = null; renderPanel(); refreshPreview(); }));
         const i = Math.min(activeChoice, cfg.choices.length - 1), q = cfg.choices[i], base = `choices.${i}`;
         out.push(textInput(`${base}.title`, 'Вопрос', { max: 120 }), switchRow(`${base}.multi`, 'Можно выбрать несколько'), switchRow(`${base}.own`, 'Кнопка «Свой вариант»', 'Получатель сможет вписать своё, если ничего не подошло'));
+        out.push(...itemRows(base, q));
+        // уточняющие вопросы: после выбора варианта — ещё один экран
+        const subs = h('div', { class: 'f follow' }, h('span', { class: 'f-l', text: 'Уточняющий вопрос после выбора' }),
+          h('p', { class: 'f-h', text: 'Например, выбрали «Кино» — дальше «Что посмотрим?». Всё можно поменять.' }));
         q.items.forEach((it, k) => {
-          const emo = h('input', { class: 'inp inp-emoji', maxlength: 8, value: it.emoji || '' });
-          emo.addEventListener('input', () => set(`${base}.items.${k}.emoji`, emo.value.trim()));
-          const name = h('input', { class: 'inp', maxlength: 40, placeholder: 'Название', value: it.name || '' });
-          name.addEventListener('input', () => set(`${base}.items.${k}.name`, name.value));
-          out.push(h('div', { class: 'item-row' }, emo, name,
-            h('button', { type: 'button', class: 'x', 'aria-label': 'Удалить', text: '×', on: { click: () => { q.items.splice(k, 1); changed(true); } } })));
+          if (!it.name.trim()) return;
+          const sb = `${base}.items.${k}.next`;
+          if (!it.next) {
+            subs.append(h('button', { type: 'button', class: 'chip chip-add', text: `＋ ${it.emoji || ''} ${it.name}`.replace(/\s+/g, ' '),
+              on: { click: () => { it.next = followFor(it.name) || { title: '', multi: false, own: true, items: [{ name: '', emoji: '✨' }, { name: '', emoji: '✨' }] }; openSub = `${i}_${k}`; changed(true); } } }));
+            return;
+          }
+          const det = h('details', { class: 'follow-d', open: openSub === `${i}_${k}` },
+            h('summary', {}, h('span', { text: `${it.emoji || '✨'} ${it.name} → ` }), h('b', { text: it.next.title || 'вопрос без названия' }), h('small', { text: ` · ${it.next.items.filter((x) => x.name.trim()).length} вар.` })),
+            textInput(`${sb}.title`, 'Вопрос', { max: 120, ph: 'Что посмотрим?' }),
+            switchRow(`${sb}.multi`, 'Можно выбрать несколько'),
+            ...itemRows(sb, it.next),
+            h('button', { type: 'button', class: 'link-btn', text: 'Убрать уточнение', on: { click: () => { delete it.next; openSub = null; changed(true); } } }));
+          det.addEventListener('toggle', () => { if (det.open) { openSub = `${i}_${k}`; refreshPreview(); } else if (openSub === `${i}_${k}`) { openSub = null; refreshPreview(); } });
+          subs.append(det);
         });
-        if (q.items.length < 8) out.push(h('button', { type: 'button', class: 'btn btn-ghost btn-sm', text: '＋ Вариант', on: { click: () => { q.items.push({ name: '', emoji: '✨' }); changed(true); } } }));
+        out.push(subs);
         out.push(h('button', { type: 'button', class: 'link-btn', text: 'Удалить этот вопрос', on: { click: () => { cfg.choices.splice(i, 1); activeChoice = 0; changed(true); } } }));
       }
       if (cfg.choices.length < 3) {
         out.push(h('div', { class: 'f' }, h('span', { class: 'f-l', text: 'Добавить вопрос из готовых' }),
           h('div', { class: 'chips' }, Object.entries(PRESETS).map(([name, p]) => h('button', {
             type: 'button', class: 'chip', text: name,
-            on: { click: () => { cfg.choices.push({ title: p.title, multi: false, own: true, items: p.items.slice(0, 6).map(([n, e]) => ({ name: n, emoji: e })) }); activeChoice = cfg.choices.length - 1; changed(true); } },
+            on: { click: () => { const its = p.items.slice(0, 6).map(([n, e]) => ({ name: n, emoji: e })); cfg.choices.push({ title: p.title, multi: false, own: true, items: name === 'Куда пойдём' ? withFollow(its) : its }); activeChoice = cfg.choices.length - 1; changed(true); } },
           })), h('button', { type: 'button', class: 'chip', text: '＋ Свой', on: { click: () => { cfg.choices.push({ title: '', multi: false, own: true, items: [{ name: '', emoji: '✨' }, { name: '', emoji: '✨' }] }); activeChoice = cfg.choices.length - 1; changed(true); } } }))));
       }
       return out;
@@ -414,7 +455,7 @@
     const out = JSON.parse(JSON.stringify(cfg));
     out.ask.noLines = (cfg.ask.noLinesText || '').split('\n').map((x) => x.trim()).filter(Boolean).slice(0, 8);
     delete out.ask.noLinesText;
-    for (const q of out.choices) q.items = q.items.filter((it) => it.name.trim());
+    out.choices = out.choices.map(cleanChoice);
     try {
       // в мини-приложении Telegram — подтверждение пользователя, чтобы сразу подключить уведомления
       const tg = !editToken && window.TG && window.TG.inside ? await Promise.race([window.TG.ready, new Promise((r) => setTimeout(r, 3000))]).then(() => window.TG.initData) : '';
@@ -438,25 +479,33 @@
     if (id === 'gate' || id === 'done') return 'gate';
     if (id === 'confirm') return cfg.confirm.enabled ? 'confirm' : 'ask';
     if (id === 'date') return cfg.date.enabled ? 'date' : 'ask';
-    if (id === 'choices') return cfg.choices.length ? 'choice' + Math.min(activeChoice, cfg.choices.length - 1) : 'ask';
+    if (id === 'choices') return !cfg.choices.length ? 'ask' : openSub && openSub.startsWith(Math.min(activeChoice, cfg.choices.length - 1) + '_') ? 'sub' + openSub : 'choice' + Math.min(activeChoice, cfg.choices.length - 1);
     return 'final';
   };
+  // пустые варианты убираем; уточнение без 2 вариантов не показываем
+  function cleanChoice(q) {
+    const items = q.items.filter((it) => it.name.trim()).map((it) => {
+      const n = it.next ? { ...it.next, items: it.next.items.filter((x) => x.name.trim()) } : null;
+      const o = { name: it.name, emoji: it.emoji }; if (n && n.items.length >= 2) o.next = n; return o;
+    });
+    return { ...q, items };
+  }
   function effectiveConfig() {
     const c = JSON.parse(JSON.stringify(cfg));
     c.ask.noLines = (cfg.ask.noLinesText || '').split('\n').map((x) => x.trim()).filter(Boolean);
-    c.choices = c.choices.map((q) => ({ ...q, items: q.items.filter((it) => it.name.trim()) })).filter((q) => q.items.length >= 2);
+    c.choices = c.choices.map(cleanChoice).filter((q) => q.items.length >= 2);
     return c;
   }
   function refreshPreview(startAt) {
     const c = effectiveConfig();
     const tomorrow = new Date(Date.now() + 86400e3);
     const iso = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
-    const target = startAt || (STEPS[stepIdx].id === 'choices' && cfg.choices.length ? 'choice' + Math.min(activeChoice, c.choices.length - 1) : previewScreen());
+    const target = startAt || previewScreen();
     if (player) player.destroy();
     if (inlinePlayer) { inlinePlayer.destroy(); inlinePlayer = null; }
     const shown = Player.screensOf(c);
     const opts = {
-      mode: 'preview', startAt: shown.includes(target) ? target : 'ask',
+      mode: 'preview', startAt: shown.includes(target) || /^sub/.test(target) ? target : 'ask',
       demo: { date: c.date.enabled ? { date: iso, time: '19:00' } : null, picks: c.choices.map((q) => [q.items[0].name]) },
     };
     player = Player.mount($('#phone'), c, opts);

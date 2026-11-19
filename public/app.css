@@ -326,3 +326,13 @@ button.pl-link { background: none; border: 0; cursor: pointer; font: 700 14px 'M
 .from-tabs .tabs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
 .from-tabs .tab { padding-left: 6px; padding-right: 6px; white-space: nowrap; font-size: 14px; text-align: center; }
 .pl-card-own { border-style: dashed; }
+/* уточняющие вопросы после выбора */
+.follow { margin-top: 18px; padding-top: 14px; border-top: 1px dashed var(--line); }
+.follow .chip-add { border: 1.5px dashed var(--line); background: #fff; color: var(--ink); cursor: pointer; font: 600 14px 'Manrope', sans-serif; border-radius: 999px; padding: 7px 12px; margin: 0 6px 6px 0; }
+.follow-d { border: 1.5px solid var(--line); border-radius: 14px; padding: 10px 12px; margin-bottom: 8px; background: #fff; }
+.follow-d[open] { border-color: var(--pink); }
+.follow-d summary { cursor: pointer; font-size: 14px; list-style: none; }
+.follow-d summary::-webkit-details-marker { display: none; }
+.follow-d summary::after { content: ' ✎'; color: var(--muted); }
+.follow-d[open] summary { margin-bottom: 10px; }
+.follow-d small { color: var(--muted); }

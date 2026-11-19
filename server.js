@@ -144,7 +144,14 @@ function normalizeConfig(raw) {
         own: q.own !== false,
         items: arr(q.items, 8).map((it) => {
           it = obj(it);
-          return { name: s(it.name, 40), emoji: s(it.emoji, 16) };
+          const out = { name: s(it.name, 40), emoji: s(it.emoji, 16) };
+          // уточняющий вопрос после выбора этого варианта
+          const n = it.next && typeof it.next === 'object' ? {
+            title: s(it.next.title, 120), multi: Boolean(it.next.multi), own: it.next.own !== false,
+            items: arr(it.next.items, 8).map((x) => { x = obj(x); return { name: s(x.name, 40), emoji: s(x.emoji, 16) }; }).filter((x) => x.name),
+          } : null;
+          if (n && n.items.length >= 2) out.next = n;
+          return out;
         }).filter((it) => it.name),
       };
     }).filter((q) => q.items.length >= 2),
@@ -429,7 +436,11 @@ function answerLines(inv) {
     const when = new Date(y, m - 1, dd).toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
     lines.push(`🗓 ${telegram.esc(when)}${a.date.time ? ', ' + telegram.esc(a.date.time) : ''}`);
   }
-  for (const c of a.choices || []) if (c) lines.push(`✨ ${telegram.esc((c.title || 'Выбор').replace(/[?:.!]+$/, ''))} — ${telegram.esc(c.picks.join(', '))}`);
+  for (const c of a.choices || []) {
+    if (!c) continue;
+    lines.push(`✨ ${telegram.esc((c.title || 'Выбор').replace(/[?:.!]+$/, ''))} — ${telegram.esc(c.picks.join(', '))}`);
+    for (const m of Object.values(c.more || {})) lines.push(`   ↳ ${telegram.esc((m.title || 'Уточнение').replace(/[?:.!]+$/, ''))} — ${telegram.esc(m.picks.join(', '))}`);
+  }
   return lines;
 }
 const ownerLink = (inv) => (S().site.url ? `\n<a href="${telegram.esc(S().site.url)}/m/${inv.token}">Открыть приглашение</a>` : '');
@@ -480,8 +491,11 @@ app.post('/api/i/:slug/event', rate('event', 300, 3600e3), (req, res) => {
     case 'date': a.date = d.chat ? { chat: true } : { date: s(d.date, 10), time: s(d.time, 5) }; break;
     case 'choices': {
       const i = Number(d.index);
+      const k = d.sub === undefined ? null : Number(d.sub);
+      const picks = arr(d.picks, 9).map((x) => s(x, 60)).filter(Boolean);
       if (Number.isInteger(i) && i >= 0 && i < 3) {
-        a.choices[i] = { title: s(d.title, 120), picks: arr(d.picks, 9).map((x) => s(x, 60)).filter(Boolean) };
+        if (k === null) a.choices[i] = { title: s(d.title, 120), picks };
+        else if (Number.isInteger(k) && k >= 0 && k < 8 && a.choices[i]) (a.choices[i].more || (a.choices[i].more = {}))[k] = { title: s(d.title, 120), picks };
       }
       break;
     }
@@ -536,7 +550,7 @@ function computeStats(days) {
   for (const i of paid) { const j = idx.get(dayKey(i.paidAt)); if (j !== undefined) byDay[j].paid++; }
   // популярное
   const count = (arr) => { const m = new Map(); for (const x of arr) m.set(x, (m.get(x) || 0) + 1); return [...m].sort((a, b) => b[1] - a[1]); };
-  const picks = count(yes.flatMap((i) => (i.answer.choices || []).filter(Boolean).flatMap((c) => c.picks))).slice(0, 8);
+  const picks = count(yes.flatMap((i) => (i.answer.choices || []).filter(Boolean).flatMap((c) => [...c.picks, ...Object.values(c.more || {}).flatMap((m) => m.picks)]))).slice(0, 8);
   const NO = { run: 'Убегает', shrink: 'Уменьшается', kiss: 'Уговаривает', turn: 'Становится «Да»', honest: 'Честный ответ' };
   const noModes = count(created.map((i) => NO[(i.config.ask || {}).noMode] || NO.run));
   const sources = { web: created.filter((i) => i.source !== 'tg').length, tg: created.filter((i) => i.source === 'tg').length };
