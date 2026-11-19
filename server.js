@@ -224,13 +224,18 @@ function sendHtml(res, file, status = 200, noindex = false, tracking = true, opt
     res.status(status).type('html').send(inject(html, tracking, opts));
   });
 }
+// короткая ссылка блогера: onlyda.ru/r/kse.nova → главная с меткой
+app.get('/r/:name', (req, res) => {
+  const name = utmPart(req.params.name);
+  res.redirect(302, name ? `/?utm_source=${encodeURIComponent(name)}` : '/');
+});
 app.get(['/', '/index.html'], (req, res) => sendHtml(res, 'index.html'));
 app.get(['/create', '/create.html'], (req, res) => sendHtml(res, 'create.html', 200, true, true, { webvisor: false }));
 for (const pg of pages.PAGES) app.get(pg.path, (req, res) => res.type('html').send(inject(pages.render(pg, S(), version()))));
 app.get('/version', (req, res) => res.type('text/plain').send(version() || 'неизвестна'));
 app.get('/robots.txt', (req, res) => {
   const base = S().site.url || `${req.protocol}://${req.get('host')}`;
-  res.type('text/plain').send(`User-agent: *\nDisallow: /i/\nDisallow: /m/\nDisallow: /api/\nDisallow: /u/\nDisallow: /create?\n\nSitemap: ${base}/sitemap.xml\n`);
+  res.type('text/plain').send(`User-agent: *\nDisallow: /i/\nDisallow: /m/\nDisallow: /api/\nDisallow: /u/\nDisallow: /r/\nDisallow: /create?\n\nSitemap: ${base}/sitemap.xml\n`);
 });
 app.get('/sitemap.xml', (req, res) => {
   const base = S().site.url || `${req.protocol}://${req.get('host')}`;

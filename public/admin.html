@@ -341,12 +341,12 @@
       var r = utmHandle(utmName.value), n = r.name;
       utmOut.textContent = '';
       if (!n) { if (utmName.value.trim()) utmOut.textContent = 'Не получилось найти ник в этой ссылке — впишите имя блогера вручную.'; return; }
-      var link = location.origin + '/?utm_source=' + encodeURIComponent(n) + (r.net ? '&utm_medium=' + r.net : '');
+      var link = location.origin + '/r/' + encodeURIComponent(n);
       var copy = h('button', { type: 'button', class: 'btn btn-sm', text: 'Скопировать', style: 'margin-top:8px' });
       copy.addEventListener('click', function () {
         (navigator.clipboard ? navigator.clipboard.writeText(link) : Promise.reject()).then(function () { copy.textContent = 'Скопировано ✓'; }, function () { copy.textContent = 'Выделите ссылку и скопируйте'; });
       });
-      utmOut.append('Метка: ', h('b', { text: n }), r.net ? ' (' + r.net + ')' : '', h('br'), 'Ссылка для блогера: ', h('code', { text: link, style: 'user-select:all;word-break:break-all' }), h('br'), copy);
+      utmOut.append('Метка: ', h('b', { text: n }), h('br'), 'Ссылка для блогера: ', h('code', { text: link, style: 'user-select:all;word-break:break-all' }), h('br'), copy);
     };
     utmName.addEventListener('input', utmMake);
     var utmRows = st.utm || [];
