@@ -179,7 +179,7 @@ app.use((req, res, next) => {
   if (req.method !== 'GET' || req.path.startsWith('/api') || !req.query || !req.query.utm_source) return next();
   const label = utmLabel(req.query);
   if (!label) return next();
-  const bot = /bot|crawl|spider|preview|facebookexternalhit|vkshare|telegram|whatsapp|yandex(?!browser)/i.test(String(req.headers['user-agent'] || ''));
+  const bot = /bot|crawl|spider|preview|facebookexternalhit|vkshare|whatsapp\//i.test(String(req.headers['user-agent'] || ''));
   if (!bot && utmOf(req) !== label) { // повторные заходы того же человека по той же метке не считаем
     const day = dayKey(Date.now());
     const m = utmVisits[label] || (utmVisits[label] = {});
