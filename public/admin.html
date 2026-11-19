@@ -321,13 +321,31 @@
       h('p', { class: 'f-h', text: 'Возврат: скопируйте номер платежа → кабинет ЮKassa → «Платежи» → вставьте номер в поиск → «Вернуть платёж». Там же видно почту и карту плательщика.' }));
 
     // блогеры: UTM-метки
-    var utmName = h('input', { class: 'inp', placeholder: 'Имя блогера латиницей, например samira' });
+    var utmName = h('input', { class: 'inp', placeholder: 'Вставьте ссылку на Instagram, Telegram, TikTok, YouTube или имя блогера' });
     var utmOut = h('div', { class: 'f-h' });
+    // из ссылки на соцсеть берём ник: instagram.com/samira_blog → samira_blog
+    var utmHandle = function (raw) {
+      var v = raw.trim(), host = '';
+      var m = v.match(/^(?:https?:\/\/)?(?:www\.|m\.)?([a-z0-9.\-]+\.[a-z]{2,})(\/[^?#]*)?/i);
+      if (m && /instagram|t\.me|telegram|tiktok|youtube|youtu\.be|vk\.com|vk\.ru|dzen|threads/i.test(m[1])) {
+        host = m[1].toLowerCase();
+        var parts = (m[2] || '').split('/').filter(Boolean).filter(function (x) { return !/^(s|c|channel|user|reel|reels|p|stories)$/i.test(x); });
+        v = parts[0] || '';
+      }
+      v = v.replace(/^@/, '').toLowerCase().replace(/[^a-z0-9а-яё_.\-]+/g, '_').replace(/^[_.]+|[_.]+$/g, '').slice(0, 40);
+      var net = /instagram/.test(host) ? 'instagram' : /t\.me|telegram/.test(host) ? 'telegram' : /tiktok/.test(host) ? 'tiktok' : /youtu/.test(host) ? 'youtube' : /vk\./.test(host) ? 'vk' : /dzen/.test(host) ? 'dzen' : /threads/.test(host) ? 'threads' : '';
+      return { name: v, net: net };
+    };
     var utmMake = function () {
-      var n = utmName.value.trim().toLowerCase().replace(/[^a-z0-9а-яё_.\-]+/g, '_').replace(/^_+|_+$/g, '');
-      if (!n) { utmOut.textContent = ''; return; }
-      var link = location.origin + '/?utm_source=' + encodeURIComponent(n);
-      utmOut.textContent = ''; utmOut.append('Ссылка для блогера: ', h('code', { text: link, style: 'user-select:all' }));
+      var r = utmHandle(utmName.value), n = r.name;
+      utmOut.textContent = '';
+      if (!n) { if (utmName.value.trim()) utmOut.textContent = 'Не получилось найти ник в этой ссылке — впишите имя блогера вручную.'; return; }
+      var link = location.origin + '/?utm_source=' + encodeURIComponent(n) + (r.net ? '&utm_medium=' + r.net : '');
+      var copy = h('button', { type: 'button', class: 'btn btn-sm', text: 'Скопировать', style: 'margin-top:8px' });
+      copy.addEventListener('click', function () {
+        (navigator.clipboard ? navigator.clipboard.writeText(link) : Promise.reject()).then(function () { copy.textContent = 'Скопировано ✓'; }, function () { copy.textContent = 'Выделите ссылку и скопируйте'; });
+      });
+      utmOut.append('Метка: ', h('b', { text: n }), r.net ? ' (' + r.net + ')' : '', h('br'), 'Ссылка для блогера: ', h('code', { text: link, style: 'user-select:all;word-break:break-all' }), h('br'), copy);
     };
     utmName.addEventListener('input', utmMake);
     var utmRows = st.utm || [];
