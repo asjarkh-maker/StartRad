@@ -62,6 +62,7 @@ function patchFrom(b) {
     for (const [k, m] of [['url', 200], ['email', 200], ['phone', 40], ['telegram', 64], ['metrikaId', 20]]) {
       const v = str(b.site[k], m); if (v !== undefined) p.site[k] = v;
     }
+    if (b.site.freeNames !== undefined) p.site.freeNames = String(b.site.freeNames || '').split(/[,;\n]/).map((x) => x.trim()).filter(Boolean).join(', ').slice(0, 300);
     if (b.site.sentBefore !== undefined) p.site.sentBefore = Math.max(0, Math.round(Number(String(b.site.sentBefore).replace(/\D/g, '')) || 0));
     if (p.site.url && !/^https?:\/\/[^\s/]+$/.test(p.site.url.replace(/\/+$/, ''))) throw new Error('Адрес сайта: например https://onlyda.ru');
     if (p.site.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.site.email)) throw new Error('Почта указана неверно');

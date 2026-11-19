@@ -147,6 +147,7 @@
       field('Telegram поддержки', inp('tgsup', s.site.telegram, { placeholder: '@имя' })),
       field('Номер счётчика Яндекс Метрики', inp('metrika', s.site.metrikaId, { inputmode: 'numeric' })),
       field('Счётчик на главной («… приглашений уже отправлено»)', inp('sentBefore', String(s.site.sentBefore || 0), { inputmode: 'numeric' })),
+      field('Бесплатно для имён', inp('freeNames', s.site.freeNames || '', { placeholder: 'Например: Азария' }), 'Если при создании написать такое имя получателя — ссылка выдаётся сразу, без оплаты. Несколько имён — через запятую. Регистр не важен.'),
       h('p', { class: 'f-h', text: 'Показывается как есть, с плюсом: 3700 → «3 700+». 0 — счётчик скрыт.' }),
       field('Цена ссылки, ₽', inp('price', String(s.price), { inputmode: 'numeric' })));
 
@@ -159,7 +160,7 @@
     save.addEventListener('click', function () {
       ok.textContent = ''; err.textContent = ''; save.disabled = true; save.textContent = 'Сохраняю…';
       var body = {
-        site: { url: val('url'), email: val('email'), phone: val('phone'), telegram: val('tgsup'), metrikaId: val('metrika'), sentBefore: val('sentBefore') },
+        site: { url: val('url'), email: val('email'), phone: val('phone'), telegram: val('tgsup'), metrikaId: val('metrika'), sentBefore: val('sentBefore'), freeNames: val('freeNames') },
         seller: { status: val('sstatus'), name: val('sname'), inn: val('sinn'), ogrnip: val('sogrn'), address: val('saddr') },
         price: val('price'),
         telegram: { token: val('tg') },

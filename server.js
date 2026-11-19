@@ -309,6 +309,9 @@ app.post('/api/inv', rate('create', 20, 3600e3), (req, res) => {
     stats: { opens: 0, noClicks: 0 }, answer: null, tgCode: newTgCode(), tgChats: [],
   };
   if (paymentMode() === 'off') markPaid(inv);
+  // бесплатные имена из админки: ссылка сразу, в выручку не идёт
+  const norm = (x) => String(x || '').trim().toLowerCase().replace(/ё/g, 'е');
+  if (!inv.paid && String(S().site.freeNames || '').split(',').map(norm).filter(Boolean).includes(norm(config.toName))) { markPaid(inv); inv.gift = true; }
   // создано в мини-приложении Telegram: подтверждаем пользователя и сразу подключаем уведомления
   const tgUser = telegram.verifyInitData((req.body || {}).tg);
   if (tgUser) inv.tgChats = [tgUser.id];

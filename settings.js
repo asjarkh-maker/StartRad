@@ -14,6 +14,7 @@ const DEFAULTS = {
     phone: '',
     telegram: '',       // @username поддержки
     metrikaId: '',      // номер счётчика Яндекс Метрики
+    freeNames: '',      // имена получателей, для которых приглашение бесплатное (через запятую)
     sentBefore: 0,      // сколько приглашений было отправлено до этого сайта (для счётчика на главной)
   },
   seller: {
@@ -80,6 +81,7 @@ function load() {
   s.site.url = String(s.site.url || '').trim().replace(/\/+$/, '');
   if (!/^https?:\/\/[a-z0-9.-]+(:\d+)?$/i.test(s.site.url)) s.site.url = ''; // мусор вместо адреса — не используем
   s.site.metrikaId = String(s.site.metrikaId || '').replace(/\D/g, '');
+  s.site.freeNames = String(s.site.freeNames || '').slice(0, 300);
   s.site.sentBefore = Math.max(0, Math.round(Number(s.site.sentBefore) || 0));
   cache = s; mtime = m;
   return s;
