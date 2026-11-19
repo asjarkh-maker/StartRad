@@ -162,6 +162,32 @@ app.use((req, res, next) => {
   next();
 });
 app.use('/api', express.json({ limit: '64kb' }));
+// ---------- UTM-метки (блогеры): запоминаем метку в cookie на 30 дней, считаем переходы ----------
+const UTM_FILE = path.join(DATA_DIR, 'utm.json');
+let utmVisits = {}; // { 'метка': { '2026-11-19': 3 } }
+try { utmVisits = JSON.parse(fs.readFileSync(UTM_FILE, 'utf8')) || {}; } catch { utmVisits = {}; }
+let utmTimer = null;
+const saveUtm = () => { clearTimeout(utmTimer); utmTimer = setTimeout(() => { try { fs.writeFileSync(UTM_FILE, JSON.stringify(utmVisits)); } catch {} }, 1000); };
+const utmPart = (v) => String(v || '').trim().toLowerCase().replace(/[^\p{L}\p{N}_.\-]+/gu, '_').replace(/^_+|_+$/g, '').slice(0, 40);
+function utmLabel(q) {
+  const src = utmPart(q.utm_source); if (!src) return '';
+  const camp = utmPart(q.utm_campaign);
+  return camp ? `${src} / ${camp}` : src;
+}
+const utmOf = (req) => { const m = String(req.headers.cookie || '').match(/(?:^|;\s*)od_utm=([^;]+)/); if (!m) return ''; try { return decodeURIComponent(m[1]).slice(0, 90); } catch { return ''; } };
+app.use((req, res, next) => {
+  if (req.method !== 'GET' || req.path.startsWith('/api') || !req.query || !req.query.utm_source) return next();
+  const label = utmLabel(req.query);
+  if (!label) return next();
+  const bot = /bot|crawl|spider|preview|facebookexternalhit|vkshare|telegram|whatsapp|yandex(?!browser)/i.test(String(req.headers['user-agent'] || ''));
+  if (!bot && utmOf(req) !== label) { // повторные заходы того же человека по той же метке не считаем
+    const day = dayKey(Date.now());
+    const m = utmVisits[label] || (utmVisits[label] = {});
+    m[day] = (m[day] || 0) + 1; saveUtm();
+  }
+  res.append('Set-Cookie', `od_utm=${encodeURIComponent(label)}; Path=/; Max-Age=${30 * 86400}; SameSite=Lax${req.secure ? '; Secure' : ''}`);
+  next();
+});
 // ---------- HTML: Метрика, плашка cookie, общий подвал ----------
 const PUB = path.join(__dirname, 'public');
 // номер версии пишет автообновление в .deployed-sha
@@ -280,6 +306,7 @@ app.post('/api/inv', rate('create', 20, 3600e3), (req, res) => {
   const tgUser = telegram.verifyInitData((req.body || {}).tg);
   if (tgUser) inv.tgChats = [tgUser.id];
   inv.source = tgUser ? 'tg' : 'web';
+  const utm = utmOf(req); if (utm) inv.utm = utm;
   db[inv.slug] = inv; byToken.set(inv.token, inv); byTgCode.set(inv.tgCode, inv); save();
   if (tgUser) {
     const base = S().site.url || `${req.protocol}://${req.get('host')}`;
@@ -513,19 +540,26 @@ function computeStats(days) {
   const NO = { run: 'Убегает', shrink: 'Уменьшается', kiss: 'Уговаривает', turn: 'Становится «Да»', honest: 'Честный ответ' };
   const noModes = count(created.map((i) => NO[(i.config.ask || {}).noMode] || NO.run));
   const sources = { web: created.filter((i) => i.source !== 'tg').length, tg: created.filter((i) => i.source === 'tg').length };
+  // по UTM-меткам (блогеры): переходы, созданные, оплаченные, выручка
+  const utmMap = new Map();
+  const utmRow = (k) => utmMap.get(k) || utmMap.set(k, { label: k, visits: 0, created: 0, paid: 0, revenue: 0 }).get(k);
+  for (const [k, perDay] of Object.entries(utmVisits)) for (const [d, n] of Object.entries(perDay)) if (Date.parse(d + 'T23:59:59+05:00') >= from) utmRow(k).visits += n;
+  for (const i of created) if (i.utm) utmRow(i.utm).created++;
+  for (const i of paid) if (i.utm) { const r = utmRow(i.utm); r.paid++; r.revenue += Number(i.payment.amount) || 0; }
+  const utm = [...utmMap.values()].filter((r) => r.visits || r.created || r.paid).sort((a, b) => b.paid - a.paid || b.revenue - a.revenue || b.visits - a.visits);
   const dates = { chosen: yes.filter((i) => i.answer.date && i.answer.date.date).length, chat: yes.filter((i) => i.answer.date && i.answer.date.chat).length };
   const recent = all.filter(realPaid).sort((a, b) => Date.parse(b.paidAt) - Date.parse(a.paidAt)).slice(0, 15).map((i) => ({
     at: i.paidAt, amount: Number(i.payment.amount) || 0,
     state: i.answer && i.answer.finishedAt ? 'yes' : i.answer && i.answer.declinedAt ? 'no' : i.stats.opens ? 'opened' : 'sent',
     expired: expired(i), source: i.source === 'tg' ? 'tg' : 'web',
-    payId: (i.payment && i.payment.id) || '', to: i.config.toName || '',
+    payId: (i.payment && i.payment.id) || '', to: i.config.toName || '', utm: i.utm || '',
   }));
   return {
     days, tz: 'Уфа (UTC+5)',
     totals: { created: created.length, paid: paid.length, testPaid: testPaid.length, revenue, conversion: created.length ? paid.length / created.length : 0,
       opened: opened.length, yes: yes.length, declined: declined.length, live: live.length,
       avgNo: noClicks.length ? noClicks.reduce((a, b) => a + b, 0) / noClicks.length : 0 },
-    byDay, picks, noModes, sources, dates, recent,
+    byDay, picks, noModes, sources, dates, recent, utm,
   };
 }
 

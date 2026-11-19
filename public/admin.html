@@ -316,9 +316,29 @@
       st.recent.length ? h('table', { class: 't' }, h('tr', {}, h('th', { text: 'Когда' }), h('th', { text: 'Сумма' }), h('th', { text: 'Статус' }), h('th', { text: 'Откуда' }), h('th', { text: 'Кому' }), h('th', { text: 'Номер платежа в ЮKassa' })),
         st.recent.map(function (r) {
           return h('tr', {}, h('td', { text: new Date(r.at).toLocaleString('ru-RU', { timeZone: 'Asia/Yekaterinburg', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) }),
-            h('td', { text: rub(r.amount) }), h('td', { text: STATE[r.state] + (r.expired ? ' · срок истёк' : '') }), h('td', { text: r.source === 'tg' ? 'бот' : 'сайт' }), h('td', { text: r.to || '—' }), h('td', {}, h('code', { text: r.payId || '—', style: 'font-size:12px;user-select:all' })));
+            h('td', { text: rub(r.amount) }), h('td', { text: STATE[r.state] + (r.expired ? ' · срок истёк' : '') }), h('td', { text: (r.source === 'tg' ? 'бот' : 'сайт') + (r.utm ? ' · ' + r.utm : '') }), h('td', { text: r.to || '—' }), h('td', {}, h('code', { text: r.payId || '—', style: 'font-size:12px;user-select:all' })));
         })) : h('p', { class: 'f-h', text: 'Оплат пока нет.' }),
       h('p', { class: 'f-h', text: 'Возврат: скопируйте номер платежа → кабинет ЮKassa → «Платежи» → вставьте номер в поиск → «Вернуть платёж». Там же видно почту и карту плательщика.' }));
+
+    // блогеры: UTM-метки
+    var utmName = h('input', { class: 'inp', placeholder: 'Имя блогера латиницей, например samira' });
+    var utmOut = h('div', { class: 'f-h' });
+    var utmMake = function () {
+      var n = utmName.value.trim().toLowerCase().replace(/[^a-z0-9а-яё_.\-]+/g, '_').replace(/^_+|_+$/g, '');
+      if (!n) { utmOut.textContent = ''; return; }
+      var link = location.origin + '/?utm_source=' + encodeURIComponent(n);
+      utmOut.textContent = ''; utmOut.append('Ссылка для блогера: ', h('code', { text: link, style: 'user-select:all' }));
+    };
+    utmName.addEventListener('input', utmMake);
+    var utmRows = st.utm || [];
+    var blog = h('div', { class: 'card' }, h('h3', { text: 'Блогеры (UTM-метки)' }),
+      utmRows.length ? h('table', { class: 't' }, h('tr', {}, h('th', { text: 'Метка' }), h('th', { text: 'Переходы' }), h('th', { text: 'Создали' }), h('th', { text: 'Оплатили' }), h('th', { text: 'Выручка' }), h('th', { text: 'Конверсия' })),
+        utmRows.map(function (r) {
+          return h('tr', {}, h('td', {}, h('b', { text: r.label })), h('td', { text: String(r.visits) }), h('td', { text: String(r.created) }), h('td', {}, h('b', { text: String(r.paid) })), h('td', { text: rub(r.revenue) }),
+            h('td', { text: r.visits ? pct(r.paid / r.visits) : '—' }));
+        })) : h('p', { class: 'f-h', text: 'За этот период переходов по меткам не было.' }),
+      h('p', { class: 'f-h', text: 'Дайте блогеру ссылку с меткой. Человек, перешедший по ней, «помнится» 30 дней: если он оплатит позже, оплата всё равно засчитается блогеру. Переходы считаются по одному на человека. Конверсия — оплаты от переходов.' }),
+      utmName, utmOut);
 
     var giftQ = h('input', { class: 'inp', placeholder: 'Имя получателя, например Самира' });
     var giftOut = h('div');
@@ -346,7 +366,7 @@
     var gift = h('div', { class: 'card' }, h('h3', { text: 'Бесплатная ссылка (реклама, блогеры)' }),
       h('p', { class: 'f-h', text: 'Создайте приглашение как обычно, но не оплачивайте. Найдите его здесь по имени и активируйте — в выручку не попадёт.' }),
       h('div', { style: 'display:flex;gap:10px' }, giftQ, giftFind), giftOut);
-    app.append(h('h1', { text: 'Админка' }), tabsBar(), periods, tiles, chartCard, lists, recent, gift,
+    app.append(h('h1', { text: 'Админка' }), tabsBar(), periods, tiles, chartCard, lists, blog, recent, gift,
       h('p', { class: 'f-h', text: 'Время — ' + st.tz + '. Выручка и оплаты — только настоящие платежи ЮKassa' + (t.testPaid ? '; ещё ' + t.testPaid + ' ссылок выдано в тестовом режиме.' : '.') }));
   }
 
