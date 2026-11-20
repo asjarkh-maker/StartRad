@@ -365,11 +365,21 @@ async function syncPayment(inv) {
   inv.payment.status = p.status;
   const good = p.status === 'succeeded' && p.paid && p.amount && p.amount.currency === 'RUB'
     && Number(p.amount.value) === Number(inv.payment.amount) && p.metadata && p.metadata.slug === inv.slug;
-  if (good) markPaid(inv);
+  if (good) { markPaid(inv); notifyPayment(inv, p.amount.value); }
   save();
   return p.status;
 }
 
+// сообщение владельцу сайта об оплате — в тот же чат, куда приходят резервные копии
+function notifyPayment(inv, amount) {
+  const chatId = S().backup && S().backup.chatId;
+  if (!chatId) return;
+  const today = Object.values(db).filter((x) => x.paid && !x.gift && x.paidAt && dayKey(Date.parse(x.paidAt)) === dayKey(Date.now())).length;
+  const lines = [`💰 Оплата ${Math.round(Number(amount))} ₽`, `Приглашение для: <b>${telegram.esc(inv.config.toName || '—')}</b>`];
+  if (inv.utm) lines.push(`Откуда: ${telegram.esc(inv.utm)}`);
+  lines.push(`Оплат сегодня: ${today}`);
+  telegram.sendTo(chatId, lines.join('\n')).catch(() => {});
+}
 app.post('/api/m/:token/pay', rate('pay', 30, 3600e3), async (req, res) => {
   const inv = owned(req, res); if (!inv) return;
   if (inv.paid) return res.json({ paid: true });
