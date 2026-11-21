@@ -687,4 +687,5 @@ function myInvites(chatId) {
   })].join('\n');
 }
 telegram.start({ findByCode: (code) => byTgCode.get(code) || null, save, onBackupCode, onLinked: catchUp, myInvites });
-app.listen(PORT, () => console.log(`«Только да» запущен: http://localhost:${PORT} (оплата: ${paymentMode()})`));
+const HOST = process.env.HOST || undefined; // HOST=127.0.0.1 — только для локального прокси (Caddy/nginx)
+app.listen(PORT, HOST, () => console.log(`«Только да» запущен: http://${HOST || 'localhost'}:${PORT} (оплата: ${paymentMode()})`));
